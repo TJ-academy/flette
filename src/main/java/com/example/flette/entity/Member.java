@@ -23,7 +23,7 @@ public class Member {
 	private String username;
 
 	@ColumnDefault("1")
-	private int level;
+	private Integer level;
 
 	private String zipcode;
 	private String address1;

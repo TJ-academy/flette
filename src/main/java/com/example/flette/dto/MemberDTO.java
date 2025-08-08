@@ -1,5 +1,5 @@
 package com.example.flette.dto;
 
-public class UserDTO {
+public class MemberDTO {
 
 }
