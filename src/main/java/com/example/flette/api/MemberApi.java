@@ -85,7 +85,8 @@ public class MemberApi {
 	}
 
 	@PostMapping("/logout")
-	public void logout(HttpSession session) {
-		session.invalidate();
+	public ResponseEntity<String> logout(HttpSession session) {
+	    session.invalidate();  // 세션 무효화
+	    return ResponseEntity.ok("로그아웃 성공");
 	}
 }
