@@ -4,6 +4,9 @@ import java.util.Date;
 
 import org.hibernate.annotations.ColumnDefault;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
@@ -29,6 +32,9 @@ public class Member {
 	private String address1;
 	private String address2;
 	private String tel;
+	
+	@Column(name = "joined_at")
+	@JsonFormat(pattern = "yyyy-MM-dd")
 	private Date joinedAt;
 
 	/*
