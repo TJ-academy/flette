@@ -1,45 +1,72 @@
 package com.example.flette.api;
 
-import java.io.File;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.ModelAndView;
 
 import com.example.flette.dto.ProductDTO;
+import com.example.flette.entity.Flower;
 import com.example.flette.entity.Product;
+import com.example.flette.entity.Review;
+import com.example.flette.repository.FlowerRepository;
 import com.example.flette.repository.ProductRepository;
-
-import jakarta.servlet.http.HttpServletRequest;
+import com.example.flette.repository.QuestionRepository;
+import com.example.flette.repository.ReviewRepository;
 
 @RestController
-@RequestMapping("/api/shop/*")
+@RequestMapping("/api/shop")
 public class ShopApi {
 	@Autowired
 	ProductRepository pr;
 	
 	@Autowired
+	FlowerRepository fr;
+	
+	@Autowired
+	ReviewRepository rr;
+	
+	@Autowired
+	QuestionRepository qr;
+	
+	@Autowired
 	ModelMapper modelMapper;
 	
 	@GetMapping
-	public List<ProductDTO> list() {
-		return pr.findAll().stream().map(product -> {
-			ProductDTO dto = modelMapper.map(product, ProductDTO.class);
-			dto.setProductId(product.getProductId());
-			return dto;
-		}).collect(Collectors.toList());
+	public List<Product> list() {
+		System.out.println("list:"+pr.findAll());
+		return pr.findAll();
 	}
 	
-	@GetMapping("{productId}")
-	public Product detail(@PathVariable(name = "productId") Integer productId) {
-		return pr.findById(productId).orElse(null);
+	@GetMapping("/{productId}")
+	public Map<String, Object> detail(@PathVariable(name = "productId") Integer productId, 
+			ModelAndView mav) {
+		Optional<Product> opt = pr.findById(productId);
+		Product p = opt.get();
+		ProductDTO dto = new ProductDTO();
+		dto.setProductId(p.getProductId());
+		dto.setProductName(p.getProductName());
+		dto.setImageName(p.getImageName());
+		dto.setBasicPrice(p.getBasicPrice());
+		dto.setDescription(p.getDescription());
+		Map<String, Object> map = new HashMap<>();
+		
+		List<Flower> flowerList = fr.findAll();
+		List<Review> reviewList = rr.findAll();
+		//System.out.println("리뷰 수 : " + rr.count());
+		map.put("dto", dto);
+		map.put("flowerList", flowerList);
+		map.put("reviewCount", rr.count());
+		map.put("reviewList", reviewList);
+		return map;
 	}
 	
 //	@PostMapping("insert")
