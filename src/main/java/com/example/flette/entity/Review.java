@@ -23,5 +23,5 @@ public class Review {
 	private String reviewContent;
 	private String reviewImage;
 	private Date reviewDate;
-	private Integer like;
+	private Integer luv;
 }

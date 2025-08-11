@@ -73,15 +73,16 @@ public class MemberApi {
 	
 	@PostMapping("/login")
 	public ResponseEntity<Member> login(@RequestBody Member m, HttpSession session) {
-		Member member = memberRepository.findByLogin(m.getUserid(), m.getPasswd());
-		if (member != null) {
-			session.setAttribute("loginId", member.getUserid());
-			session.setAttribute("loginName", member.getUsername());
-			session.setAttribute("role", member.getLevel());
-			return ResponseEntity.ok(member);
-		} else {
-			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-		}
+	    Member member = memberRepository.findByLogin(m.getUserid(), m.getPasswd());
+	    if (member != null) {
+	        session.setAttribute("loginId", member.getUserid());
+	        session.setAttribute("loginName", member.getUsername());
+	        // 세션에 role(level) 정보 저장
+	        session.setAttribute("role", member.getLevel());
+	        return ResponseEntity.ok(member);
+	    } else {
+	        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+	    }
 	}
 
 	@PostMapping("/logout")
