@@ -17,5 +17,6 @@ public class Product {
 	private String productName;
 	private String imageName;
 	private Integer basicPrice;
+	private String summary;
 	private String description;
 }
