@@ -22,4 +22,23 @@ public interface MemberRepository extends JpaRepository<Member, String> {
             + "(:userid, SHA2(:passwd, 256), :username, :zipcode, :address1, :address2, :tel, now())", nativeQuery = true)
     void register(@Param("userid") String userid, @Param("passwd") String passwd, @Param("username") String username, @Param("zipcode") String zipcode,
                   @Param("address1") String address1, @Param("address2") String address2, @Param("tel") String tel);
+    
+    // 회원 정보 업데이트
+    @Modifying
+    @Transactional
+    @Query("UPDATE Member m SET m.username = :username, m.address1 = :address1, m.address2 = :address2, m.tel = :tel WHERE m.userid = :userid")
+    void updateMemberInfo(@Param("userid") String userid, @Param("username") String username, @Param("address1") String address1, @Param("address2") String address2, @Param("tel") String tel);
+    
+    // 회원 ID로 회원 정보 조회
+    Member findByUserid(String userid);
+
+    // 비밀번호 변경
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE Member SET passwd = SHA2(:newPwd, 256) WHERE userid = :userid", nativeQuery = true)
+    void updatePassword(@Param("userid") String userid, @Param("newPwd") String newPwd);
+    
+    // 비밀번호 확인용 쿼리
+    @Query(value = "SELECT userid FROM Member WHERE userid = :userid AND passwd = SHA2(:currentPwd, 256)", nativeQuery = true)
+    String checkPassword(@Param("userid") String userid, @Param("currentPwd") String currentPwd);
 }
