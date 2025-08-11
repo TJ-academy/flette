@@ -4,7 +4,6 @@ import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
@@ -17,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.flette.dto.MemberDTO;
@@ -75,10 +75,18 @@ public class AdminApi {
 	
 	/** Q&A 목록 (페이징) */
     @GetMapping("/qna")
-    public ResponseEntity<Page<QnaItemDTO>> getQnaList(Pageable pageable) {
-        Page<Question> page = questionRepository.findAll(
-                PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by(Sort.Direction.DESC, "questionDate"))
-        );
+    public ResponseEntity<Page<QnaItemDTO>> getQnaList(
+            @PageableDefault(size = 10, sort = "questionDate", direction = Sort.Direction.DESC) Pageable pageable,
+            @RequestParam(required = false, defaultValue = "false") boolean unanswered) {
+        
+        Page<Question> page;
+        if (unanswered) {
+            // 미답변만 조회
+            page = questionRepository.findByStatusOrderByQuestionDateDesc(false, pageable);
+        } else {
+            // 전체 조회 (답변 완료 / 미답변 모두)
+            page = questionRepository.findAll(pageable);
+        }
 
         Page<QnaItemDTO> body = page.map(q -> {
             Optional<Answer> ans = answerRepository.findByQuestionId(q.getQuestionId());
