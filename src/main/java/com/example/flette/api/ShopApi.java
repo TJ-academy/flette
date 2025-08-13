@@ -85,7 +85,7 @@ public class ShopApi {
 		Map<String, Object> map = new HashMap<>();
 		List<Review> reviewList = rr.findByProductId(productId);
 		//System.out.println("리뷰 수 : " + rr.count());
-		map.put("rcount", rr.count());
+		map.put("rcount", rr.findByProductId(productId).size());
 		map.put("rlist", reviewList);
 		return map;
 	}
