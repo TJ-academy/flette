@@ -1,29 +1,24 @@
-package com.example.flette.entity;
+package com.example.flette.dto;
 
 import java.util.Date;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Entity
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class Question {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+public class QnADTO {
 	private Integer questionId;
-	
 	private Integer productId;
 	private String userid;
 	private String title;
 	private String content;
 	private boolean status;
-	private String passwd;
 	private Date questionDate;
+	
+	private Integer answerId;
+	private String answerContent;
+	private Date answerDate;
 }
