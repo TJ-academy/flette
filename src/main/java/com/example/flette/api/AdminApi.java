@@ -1,11 +1,16 @@
 package com.example.flette.api;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Example;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,6 +23,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,6 +32,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.example.flette.dto.MemberDTO;
 import com.example.flette.dto.QnaItemDTO;
@@ -46,7 +53,6 @@ import com.example.flette.repository.OrdersRepository;
 import com.example.flette.repository.ProductRepository;
 import com.example.flette.repository.QuestionRepository;
 
-import jakarta.validation.Valid;
 import jakarta.persistence.criteria.Predicate;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -385,7 +391,11 @@ public class AdminApi {
     @Data @AllArgsConstructor @NoArgsConstructor
     static class RefundReq { private String reason; }
     
- // ====== 꽃(Flower) CRUD ======
+// ====== 꽃(Flower) CRUD ======
+    
+    @Value("${file.upload-dir}")
+    private String uploadDir;
+    
     @GetMapping("/flowers")
     public Page<Flower> listFlowers(
         @RequestParam(name = "page", defaultValue = "0") int page,
@@ -397,7 +407,7 @@ public class AdminApi {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "flowerId"));
 
         Specification<Flower> spec = (root, query, cb) -> {
-            var ps = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
+            var ps = new ArrayList<Predicate>();
 
             if (category != null && !category.isBlank()) {
                 ps.add(cb.equal(root.get("category"), category));
@@ -413,7 +423,7 @@ public class AdminApi {
                     cb.like(root.get("story"), like)
                 ));
             }
-            return cb.and(ps.toArray(jakarta.persistence.criteria.Predicate[]::new));
+            return cb.and(ps.toArray(Predicate[]::new));
         };
 
         return flowerRepository.findAll(spec, pageable);
@@ -425,29 +435,67 @@ public class AdminApi {
     }
 
     @PostMapping("/flowers")
-    public Flower createFlower(@Valid @RequestBody FlowerCreateReq req) {
+    public Flower createFlower(@ModelAttribute FlowerAdminForm form) throws IOException {
         Flower f = new Flower();
-        f.setAddPrice(req.getAddPrice());
-        f.setCategory(req.getCategory());
-        f.setDescription(req.getDescription());
-        f.setFlowerName(req.getFlowerName());
-        f.setImageName(req.getImageName());
-        f.setStory(req.getStory());
-        f.setShow(Boolean.TRUE.equals(req.getShow())); // null이면 false
+        f.setAddPrice(form.getAddPrice());
+        f.setCategory(form.getCategory());
+        f.setDescription(form.getDescription());
+        f.setFlowerName(form.getFlowerName());
+        f.setStory(form.getStory());
+        f.setShow(Boolean.TRUE.equals(form.getShow()));
+
+        if (form.getFile() != null && !form.getFile().isEmpty()) {
+            f.setImageName(saveImage(form.getFile(), form.getCategory()));
+        } else {
+            f.setImageName(""); // 파일이 없으면 이미지명 공백 처리
+        }
         return flowerRepository.save(f);
     }
 
     @PutMapping("/flowers/{id}")
-    public Flower updateFlower(@PathVariable("id") Integer id, @RequestBody FlowerUpdateReq req) {
+    public Flower updateFlower(@PathVariable("id") Integer id, @ModelAttribute FlowerAdminForm form) throws IOException {
         Flower f = flowerRepository.findById(id).orElseThrow();
-        if (req.getAddPrice() != null) f.setAddPrice(req.getAddPrice());
-        if (req.getCategory() != null) f.setCategory(req.getCategory());
-        if (req.getDescription() != null) f.setDescription(req.getDescription());
-        if (req.getFlowerName() != null) f.setFlowerName(req.getFlowerName());
-        if (req.getImageName() != null) f.setImageName(req.getImageName());
-        if (req.getStory() != null) f.setStory(req.getStory());
-        if (req.getShow() != null) f.setShow(req.getShow());
+
+        if (form.getAddPrice() != null) f.setAddPrice(form.getAddPrice());
+        if (form.getCategory() != null) f.setCategory(form.getCategory());
+        if (form.getDescription() != null) f.setDescription(form.getDescription());
+        if (form.getFlowerName() != null) f.setFlowerName(form.getFlowerName());
+        if (form.getStory() != null) f.setStory(form.getStory());
+        if (form.getShow() != null) f.setShow(form.getShow());
+
+        if (form.getFile() != null && !form.getFile().isEmpty()) {
+            f.setImageName(saveImage(form.getFile(), f.getCategory()));
+        }
+
         return flowerRepository.save(f);
+    }
+
+    // 이미지 저장
+    private String saveImage(MultipartFile file, String category) throws IOException {
+        String folder = getCategoryFolder(category);
+        String fileName = Paths.get(file.getOriginalFilename()).getFileName().toString();
+        
+        Path uploadPath = Paths.get(uploadDir, folder);
+        if (!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath);
+        }
+        
+        Path filePath = uploadPath.resolve(fileName);
+        Files.copy(file.getInputStream(), filePath);
+
+        return fileName; // 이미지 파일명 반환
+    }
+
+    // 카테고리별 폴더 구분
+    private String getCategoryFolder(String category) {
+        switch (category) {
+            case "서브":
+                return "sub";
+            case "잎사귀":
+                return "foliage";
+            default:
+                return "main"; // 기본값은 'main'
+        }
     }
 
     @PatchMapping("/flowers/{id}/show")
@@ -462,35 +510,24 @@ public class AdminApi {
     }
 
     @DeleteMapping("/flowers/{id}")
-    public void deleteFlower(@PathVariable("id") Integer id)  {
+    public void deleteFlower(@PathVariable("id") Integer id) {
         flowerRepository.deleteById(id);
     }
 
     // ====== 요청 DTO ======
     @Data @NoArgsConstructor @AllArgsConstructor
-    static class FlowerCreateReq {
+    static class FlowerAdminForm {
         private Integer addPrice;
         private String category;
         private String description;
         private String flowerName;
-        private String imageName;
-        private String story;
-        private Boolean show; // 생략 시 false로 저장
-    }
-
-    @Data @NoArgsConstructor @AllArgsConstructor
-    static class FlowerUpdateReq {
-        private Integer addPrice;
-        private String category;
-        private String description;
-        private String flowerName;
-        private String imageName;
         private String story;
         private Boolean show;
+        private MultipartFile file; // 파일 필드 추가
     }
 
     @Data @NoArgsConstructor @AllArgsConstructor
     static class ShowReq {
-        private Boolean show; // 없으면 토글
+        private Boolean show;
     }
 }
