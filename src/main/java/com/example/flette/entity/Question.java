@@ -2,6 +2,7 @@ package com.example.flette.entity;
 
 import java.util.Date;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -23,7 +24,10 @@ public class Question {
 	private String userid;
 	private String title;
 	private String content;
-	private boolean status;
+	
+	@Column(nullable = false)
+	private boolean status = false;
+	
 	private String passwd;
 	private Date questionDate;
 }

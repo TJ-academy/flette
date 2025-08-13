@@ -98,7 +98,7 @@ public class ShopApi {
 	@PostMapping("/{productId}/qa/write")
 	public void addQues(@RequestBody Question ques) {
 		String passwd = ques.getPasswd();
-	    if (passwd == null || passwd.trim().isEmpty()) {
+	    if (passwd == null || passwd.trim().isEmpty() || passwd.trim() == "") {
 	        passwd = null;
 	    }
 	    
@@ -120,33 +120,37 @@ public class ShopApi {
             
 			String passwd = paswd.get("passwd");
 			
+			Optional<Integer> result = qr.checkPassword(questionId, passwd);
+			
+			//System.out.println("\n\n비밀번호가 일치합니까?\n" + result);
             // 비밀번호가 맞는지 확인 (암호화된 비밀번호와 비교)
-            if (qr.checkPassword(questionId, passwd) == null) {
+            if (result.isEmpty()) {
                 map.put("message", "비밀번호가 일치하지 않습니다.");
             	return map;
+            } else {
+            	// 비밀번호가 일치
+                QnADTO dto = new QnADTO();
+                dto.setQuestionId(q.getQuestionId());
+    			dto.setProductId(q.getProductId());
+    			dto.setUserid(q.getUserid());
+    			dto.setTitle(q.getTitle());
+    			dto.setContent(q.getContent());
+    			dto.setStatus(q.isStatus());
+    			dto.setQuestionDate(q.getQuestionDate());
+    			
+    			if(q.isStatus()) {
+    				Optional<Answer> aq = ar.findByQuestionId(questionId);
+                    Answer a = aq.get();
+        			dto.setAnswerId(a.getAnswerId());
+        			dto.setAnswerContent(a.getAnswerContent());
+        			dto.setAnswerDate(a.getAnswerDate());
+    			}
+    			
+    			map.put("dto", dto);
             }
-            
-            // 비밀번호가 일치
-            QnADTO dto = new QnADTO();
-            dto.setQuestionId(q.getQuestionId());
-			dto.setProductId(q.getProductId());
-			dto.setUserid(q.getUserid());
-			dto.setTitle(q.getTitle());
-			dto.setContent(q.getContent());
-			dto.setStatus(q.isStatus());
-			dto.setQuestionDate(q.getQuestionDate());
-			
-			if(q.isStatus()) {
-				Optional<Answer> aq = ar.findByQuestionId(questionId);
-                Answer a = aq.get();
-    			dto.setAnswerId(a.getAnswerId());
-    			dto.setAnswerContent(a.getAnswerContent());
-    			dto.setAnswerDate(a.getAnswerDate());
-			}
-			
-			map.put("dto", dto);
         } catch (Exception e) {
         	map.put("message", "비밀번호 확인을 실패했습니다.");
+        	System.out.println(e);
         }
 		return map;
 	}
