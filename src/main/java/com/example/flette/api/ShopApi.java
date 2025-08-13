@@ -7,17 +7,27 @@ import java.util.Optional;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.ModelAndView;
 
 import com.example.flette.dto.ProductDTO;
+import com.example.flette.dto.QnADTO;
+import com.example.flette.entity.Answer;
 import com.example.flette.entity.Flower;
+import com.example.flette.entity.Member;
 import com.example.flette.entity.Product;
+import com.example.flette.entity.Question;
 import com.example.flette.entity.Review;
+import com.example.flette.repository.AnswerRepository;
 import com.example.flette.repository.FlowerRepository;
+import com.example.flette.repository.MemberRepository;
 import com.example.flette.repository.ProductRepository;
 import com.example.flette.repository.QuestionRepository;
 import com.example.flette.repository.ReviewRepository;
@@ -38,17 +48,21 @@ public class ShopApi {
 	QuestionRepository qr;
 	
 	@Autowired
+	AnswerRepository ar;
+	
+	@Autowired
+	MemberRepository mr;
+	
+	@Autowired
 	ModelMapper modelMapper;
 	
 	@GetMapping
 	public List<Product> list() {
-		System.out.println("list:"+pr.findAll());
 		return pr.findAll();
 	}
 	
-	@GetMapping("/{productId}")
-	public Map<String, Object> detail(@PathVariable(name = "productId") Integer productId, 
-			ModelAndView mav) {
+	@GetMapping("/{productId}/detail")
+	public Map<String, Object> detail(@PathVariable(name = "productId") Integer productId) {
 		Optional<Product> opt = pr.findById(productId);
 		Product p = opt.get();
 		ProductDTO dto = new ProductDTO();
@@ -60,71 +74,80 @@ public class ShopApi {
 		Map<String, Object> map = new HashMap<>();
 		
 		List<Flower> flowerList = fr.findAll();
-		List<Review> reviewList = rr.findAll();
 		//System.out.println("리뷰 수 : " + rr.count());
 		map.put("dto", dto);
 		map.put("flowerList", flowerList);
-		map.put("reviewCount", rr.count());
-		map.put("reviewList", reviewList);
 		return map;
 	}
 	
-//	@PostMapping("insert")
-//	public void insert(ProductDTO dto, HttpServletRequest request) {
-//		String filename = "-";
-//		if(dto.getImg() != null && !dto.getImg().isEmpty()) {
-//			filename = dto.getImg().getOriginalFilename();
-//			try {
-//				String path = request.getSession().getServletContext().getRealPath("/images/");
-//				new File(path).mkdir();
-//				dto.getImg().transferTo(new File(path + filename));
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//			}
-//		}
-//		dto.setFilename(filename);
-//		Product p = modelMapper.map(dto, Product.class);
-//		pr.save(p);
-//	}
-//	
-//	
-//	
-//	@PostMapping("update")
-//	public void update(ProductDTO dto, 
-//			HttpServletRequest request) {
-//		String filename = "-";
-//		if(dto.getImg() != null && !dto.getImg().isEmpty()) {
-//			filename = dto.getImg().getOriginalFilename();
-//			try {
-//				String path = request.getSession().getServletContext().getRealPath("/images/");
-//				new File(path).mkdir();
-//				dto.getImg().transferTo(new File(path + filename));
-//			} catch (Exception e) {
-//				e.printStackTrace();
-//			}
-//			dto.setFilename(filename);
-//		} else {
-//			Optional<Product> opt = pr.findById(dto.getProductCode());
-//			Product dto2 = opt.get();
-//			dto.setFilename(dto2.getFilename());
-//		}
-//		Product p = modelMapper.map(dto, Product.class);
-//		pr.save(p);
-//	}
-//	
-//	@GetMapping("delete/{productCode}")
-//	public void delete(@PathVariable(name = "productCode") long productCode, 
-//			HttpServletRequest request) {
-//		Optional<Product> opt = pr.findById(productCode);
-//		Product dto = opt.get();
-//		String filename = dto.getFilename();
-//		if(filename != null && !filename.equals("-")) {
-//			String path = request.getSession().getServletContext().getRealPath("/images/");
-//			File f = new File(path + filename);
-//			if(f.exists()) {
-//				f.delete();
-//			}
-//		}
-//		pr.deleteById(productCode);
-//	}
+	@GetMapping("/{productId}/review")
+	public Map<String, Object> reviewList(@PathVariable(name = "productId") Integer productId) {
+		Map<String, Object> map = new HashMap<>();
+		List<Review> reviewList = rr.findByProductId(productId);
+		//System.out.println("리뷰 수 : " + rr.count());
+		map.put("rcount", rr.count());
+		map.put("rlist", reviewList);
+		return map;
+	}
+	
+	@GetMapping("/{productId}/qa")
+	public List<Question> qaList(@PathVariable(name = "productId") Integer productId) {
+		return qr.findByProductId(productId);
+	}
+	
+	@PostMapping("/{productId}/qa/write")
+	public void addQues(@RequestBody Question ques) {
+		String passwd = ques.getPasswd();
+	    if (passwd == null || passwd.trim().isEmpty()) {
+	        passwd = null;
+	    }
+	    
+		qr.addQues(
+				ques.getProductId(), 
+				ques.getUserid(), 
+				ques.getTitle(), 
+				ques.getContent(), 
+				passwd);
+	}
+	
+	@PostMapping("/{productId}/qa/{questionId}/check")
+	public Map<String, Object> checkPassword(@PathVariable("questionId") Integer questionId, 
+			@RequestBody Map<String, String> paswd) {
+		Map<String, Object> map = new HashMap<>();
+		try {
+			Optional<Question> oq = qr.findById(questionId);
+			Question q = oq.get();
+            
+			String passwd = paswd.get("passwd");
+			
+            // 비밀번호가 맞는지 확인 (암호화된 비밀번호와 비교)
+            if (qr.checkPassword(questionId, passwd) == null) {
+                map.put("message", "비밀번호가 일치하지 않습니다.");
+            	return map;
+            }
+            
+            // 비밀번호가 일치
+            QnADTO dto = new QnADTO();
+            dto.setQuestionId(q.getQuestionId());
+			dto.setProductId(q.getProductId());
+			dto.setUserid(q.getUserid());
+			dto.setTitle(q.getTitle());
+			dto.setContent(q.getContent());
+			dto.setStatus(q.isStatus());
+			dto.setQuestionDate(q.getQuestionDate());
+			
+			if(q.isStatus()) {
+				Optional<Answer> aq = ar.findByQuestionId(questionId);
+                Answer a = aq.get();
+    			dto.setAnswerId(a.getAnswerId());
+    			dto.setAnswerContent(a.getAnswerContent());
+    			dto.setAnswerDate(a.getAnswerDate());
+			}
+			
+			map.put("dto", dto);
+        } catch (Exception e) {
+        	map.put("message", "비밀번호 확인을 실패했습니다.");
+        }
+		return map;
+	}
 }
