@@ -227,27 +227,29 @@ public class AdminApi {
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "orderDate"));
 
         Specification<Orders> spec = (root, query, cb) -> {
-            List<Predicate> ps = new ArrayList<>();
+            List<Predicate> predicates = new ArrayList<>();
+            
             if (status != null && !status.isBlank()) {
-                ps.add(cb.equal(root.get("status"), status));
+                predicates.add(cb.equal(root.get("status"), status));
             }
+            
             if (userid != null && !userid.isBlank()) {
-                ps.add(cb.equal(root.get("userid"), userid));
+                predicates.add(cb.equal(root.get("userid"), userid));
             }
+            
             if (from != null) {
-                ps.add(cb.greaterThanOrEqualTo(root.<java.util.Date>get("orderDate"),
-                        java.sql.Date.valueOf(from)));
+                predicates.add(cb.greaterThanOrEqualTo(root.get("orderDate"), java.sql.Date.valueOf(from)));
             }
+            
             if (to != null) {
-                ps.add(cb.lessThan(root.<java.util.Date>get("orderDate"),
-                        java.sql.Date.valueOf(to.plusDays(1))));
+                predicates.add(cb.lessThan(root.get("orderDate"), java.sql.Date.valueOf(to.plusDays(1))));
             }
 
-            return cb.and(ps.toArray(new Predicate[0]));
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        Page<Orders> pageData = ordersRepository.findAll(spec, pageable);
-        return pageData.map(OrderSummaryDto::from);
+        // 이 줄은 이제 정상적으로 작동합니다.
+        return ordersRepository.findAll(spec, pageable).map(OrderSummaryDto::from);
     }
 
     // ========================= 주문 단건 조회 (헤더 + 라인아이템) =========================
