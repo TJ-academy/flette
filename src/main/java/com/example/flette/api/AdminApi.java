@@ -361,7 +361,7 @@ public class AdminApi {
 
         static OrderSummaryDto from(Orders o) {
             return new OrderSummaryDto(
-                    o.getOrderId(), o.getUserid(), o.getMoney(), o.getDelivery(),
+                    o.getOrderId(), o.getUserId(), o.getMoney(), o.getDelivery(),
                     o.getTotalMoney(), o.getStatus(), o.getOrderDate(),
                     o.getMethod(), o.getBank()
             );
