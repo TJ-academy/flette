@@ -1,4 +1,4 @@
-package com.example.flette.api;
+package com.example.flette.api.backup;
 
 import java.util.HashMap;
 import java.util.List;
@@ -31,9 +31,10 @@ import com.example.flette.repository.MemberRepository;
 import com.example.flette.repository.ProductRepository;
 import com.example.flette.repository.QuestionRepository;
 import com.example.flette.repository.ReviewRepository;
-
+/*
 @RestController
 @RequestMapping("/api/shop")
+*/
 public class ShopApi {
 	@Autowired
 	ProductRepository pr;
@@ -112,7 +113,7 @@ public class ShopApi {
 	
 	@PostMapping("/{productId}/qa/{questionId}/check")
 	public Map<String, Object> checkPassword(@PathVariable("questionId") Integer questionId, 
-			@RequestBody Map<String, String> paswd, @PathVariable("productId") Integer productId) {
+			@RequestBody Map<String, String> paswd) {
 		Map<String, Object> map = new HashMap<>();
 		try {
 			Optional<Question> oq = qr.findById(questionId);
@@ -137,6 +138,7 @@ public class ShopApi {
 			dto.setQuestionDate(q.getQuestionDate());
 			
 			if(q.isStatus()) {
+				// 🚨 수정: findByQuestionId -> findByQuestion_QuestionId
 				Optional<Answer> aq = ar.findByQuestion_QuestionId(questionId);
                 Answer a = aq.get();
     			dto.setAnswerId(a.getAnswerId());

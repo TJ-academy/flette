@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -62,55 +63,55 @@ import lombok.NoArgsConstructor;
 @RequestMapping("/api/admin")
 public class AdminApi {
 
-	@Autowired MemberRepository memberRepository;
-	@Autowired QuestionRepository questionRepository;
-	@Autowired AnswerRepository answerRepository;
-	@Autowired OrdersRepository ordersRepository;
+    @Autowired MemberRepository memberRepository;
+    @Autowired QuestionRepository questionRepository;
+    @Autowired AnswerRepository answerRepository;
+    @Autowired OrdersRepository ordersRepository;
     @Autowired OrderDetailRepository orderDetailRepository;
     @Autowired ProductRepository productRepository;
     @Autowired BouquetRepository bouquetRepository;
     @Autowired FlowerRepository flowerRepository;
 
-	/**
-	 * 회원 목록을 페이지별로 조회합니다. GET /api/admin/members?page=0&size=10
-	 *
-	 * @param page 조회할 페이지 번호 (0부터 시작)
-	 * @param size 한 페이지당 보여줄 회원 수
-	 * @return 페이지네이션된 회원 목록
-	 */
-	@GetMapping("/members")
-	public ResponseEntity<Page<MemberDTO>> getMembers(
-	        @PageableDefault(size = 10) Pageable pageable) {
+    /**
+     * 회원 목록을 페이지별로 조회합니다. GET /api/admin/members?page=0&size=10
+     *
+     * @param page 조회할 페이지 번호 (0부터 시작)
+     * @param size 한 페이지당 보여줄 회원 수
+     * @return 페이지네이션된 회원 목록
+     */
+    @GetMapping("/members")
+    public ResponseEntity<Page<MemberDTO>> getMembers(
+            @PageableDefault(size = 10) Pageable pageable) {
 
-	    Page<Member> page = memberRepository.findAll(pageable); // ✅ pageable 그대로 사용
-	    Page<MemberDTO> body = page.map(MemberDTO::from);       // DTO 변환
-	    return ResponseEntity.ok(body);
-	}
+        Page<Member> page = memberRepository.findAll(pageable);
+        Page<MemberDTO> body = page.map(MemberDTO::from);
+        return ResponseEntity.ok(body);
+    }
 
-	/**
-	 * 특정 회원을 삭제합니다. DELETE /api/admin/members/{userid}
-	 *
-	 * @param userid 삭제할 회원의 아이디
-	 * @return 삭제 성공 메시지
-	 */
-	@DeleteMapping("/members/{userid}")
-	public ResponseEntity<String> deleteMember(@PathVariable String userid) {
-		if (memberRepository.existsById(userid)) {
-			memberRepository.deleteById(userid);
-			return ResponseEntity.ok("회원 삭제 성공");
-		} else {
-			return ResponseEntity.notFound().build();
-		}
-	}
-	
-	/** Q&A 목록 (페이징) */
+    /**
+     * 특정 회원을 삭제합니다. DELETE /api/admin/members/{userid}
+     *
+     * @param userid 삭제할 회원의 아이디
+     * @return 삭제 성공 메시지
+     */
+    @DeleteMapping("/members/{userid}")
+    public ResponseEntity<String> deleteMember(@PathVariable("userid") String userid) {
+        if (memberRepository.existsById(userid)) {
+            memberRepository.deleteById(userid);
+            return ResponseEntity.ok("회원 삭제 성공");
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+    
+    /** Q&A 목록 (페이징) */
     @GetMapping("/qna")
     public ResponseEntity<Page<QnaItemDTO>> getQnaList(
             @PageableDefault(size = 10, sort = "questionDate", direction = Sort.Direction.DESC) Pageable pageable,
-            @RequestParam(required = false, defaultValue = "false") boolean unanswered) {
+            @RequestParam(name = "unanswered", required = false, defaultValue = "false") Boolean unanswered) {
         
         Page<Question> page;
-        if (unanswered) {
+        if (Boolean.TRUE.equals(unanswered)) {
             // 미답변만 조회
             page = questionRepository.findByStatusOrderByQuestionDateDesc(false, pageable);
         } else {
@@ -119,7 +120,7 @@ public class AdminApi {
         }
 
         Page<QnaItemDTO> body = page.map(q -> {
-            Optional<Answer> ans = answerRepository.findByQuestionId(q.getQuestionId());
+            Optional<Answer> ans = answerRepository.findByQuestion_QuestionId(q.getQuestionId());
             return QnaItemDTO.builder()
                     .questionId(q.getQuestionId())
                     .title(q.getTitle())
@@ -137,10 +138,10 @@ public class AdminApi {
 
     /** Q&A 상세 */
     @GetMapping("/qna/{questionId}")
-    public ResponseEntity<QnaItemDTO> getQna(@PathVariable Integer questionId) {
+    public ResponseEntity<QnaItemDTO> getQna(@PathVariable("questionId") Integer questionId) {
         return questionRepository.findById(questionId)
                 .map(q -> {
-                    Optional<Answer> ans = answerRepository.findByQuestionId(q.getQuestionId());
+                    Optional<Answer> ans = answerRepository.findByQuestion_QuestionId(q.getQuestionId());
                     return ResponseEntity.ok(
                             QnaItemDTO.builder()
                                     .questionId(q.getQuestionId())
@@ -159,28 +160,27 @@ public class AdminApi {
 
     /** 답변 등록 */
     @PostMapping("/qna/{questionId}/answer")
-    @Transactional
-    public ResponseEntity<QnaItemDTO> createAnswer(@PathVariable Integer questionId, @RequestBody Answer req) {
-        Question q = questionRepository.findById(questionId).orElse(null);
-        if (q == null) return ResponseEntity.notFound().build();
+    public ResponseEntity<Answer> createAnswer(@PathVariable("questionId") Integer questionId, @RequestBody Answer answerDto) {
+        Question question = questionRepository.findById(questionId)
+                .orElseThrow(() -> new RuntimeException("Question not found with id: " + questionId));
+        
+        Answer newAnswer = new Answer();
+        newAnswer.setQuestion(question);
+        newAnswer.setAnswerContent(answerDto.getAnswerContent());
+        newAnswer.setAnswerDate(new Date());
 
-        Answer a = new Answer();
-        a.setQuestionId(questionId); // ⚠ qeustionId 오타 매핑 주의
-        a.setAnswerContent(req.getAnswerContent());
-        a.setAnswerDate(new java.util.Date());
-        answerRepository.save(a);
+        Answer savedAnswer = answerRepository.save(newAnswer);
 
-        q.setStatus(true);
-        questionRepository.save(q);
-
-        return getQna(questionId);
+        question.setStatus(true);
+        questionRepository.save(question);
+        
+        return ResponseEntity.ok(savedAnswer);
     }
-
     /** 답변 수정 */
     @PutMapping("/qna/{questionId}/answer")
     @Transactional
-    public ResponseEntity<QnaItemDTO> updateAnswer(@PathVariable Integer questionId, @RequestBody Answer req) {
-        Optional<Answer> ansOpt = answerRepository.findByQuestionId(questionId);
+    public ResponseEntity<QnaItemDTO> updateAnswer(@PathVariable("questionId") Integer questionId, @RequestBody Answer req) {
+        Optional<Answer> ansOpt = answerRepository.findByQuestion_QuestionId(questionId);
         if (ansOpt.isEmpty()) return ResponseEntity.notFound().build();
 
         Answer a = ansOpt.get();
@@ -194,8 +194,8 @@ public class AdminApi {
     /** 답변 삭제 */
     @DeleteMapping("/qna/{questionId}/answer")
     @Transactional
-    public ResponseEntity<Void> deleteAnswer(@PathVariable Integer questionId) {
-        Optional<Answer> ansOpt = answerRepository.findByQuestionId(questionId);
+    public ResponseEntity<Void> deleteAnswer(@PathVariable("questionId") Integer questionId) {
+        Optional<Answer> ansOpt = answerRepository.findByQuestion_QuestionId(questionId);
         if (ansOpt.isPresent()) {
             answerRepository.delete(ansOpt.get());
             questionRepository.findById(questionId).ifPresent(q -> {
@@ -206,6 +206,7 @@ public class AdminApi {
         }
         return ResponseEntity.notFound().build();
     }
+
 
     /** 작성자 마스킹 */
     private String mask(String uid) {
@@ -251,7 +252,7 @@ public class AdminApi {
 
     // ========================= 주문 단건 조회 (헤더 + 라인아이템) =========================
     @GetMapping("/orders/{orderId}")
-    public OrderViewDto getOrder(@PathVariable Integer orderId) {
+    public OrderViewDto getOrder(@PathVariable("orderId") Integer orderId) {
         Orders o = ordersRepository.findById(orderId).orElseThrow();
         List<OrderDetail> lines = orderDetailRepository.findAll(
                 Example.of(new OrderDetail(null, orderId, null, null))
@@ -293,7 +294,7 @@ public class AdminApi {
     // ========================= 주문 상태 변경 =========================
     @PatchMapping("/orders/{orderId}/status")
     public OrderSummaryDto updateOrderStatus(
-            @PathVariable Integer orderId,
+            @PathVariable("orderId") Integer orderId,
             @RequestBody UpdateStatusReq req
     ) {
         Orders o = ordersRepository.findById(orderId).orElseThrow();
@@ -305,12 +306,12 @@ public class AdminApi {
     // ========================= 주문 환불 사유 메모(간단 버전) =========================
     @PatchMapping("/orders/{orderId}/refund")
     public OrderSummaryDto setRefundReason(
-            @PathVariable Integer orderId,
+            @PathVariable("orderId") Integer orderId,
             @RequestBody RefundReq req
     ) {
         Orders o = ordersRepository.findById(orderId).orElseThrow();
         o.setRefundReason(req.getReason());
-        o.setStatus("REFUND_REQUESTED"); // 정책에 맞게 상태값 사용
+        o.setStatus("REFUND_REQUESTED");
         ordersRepository.save(o);
         return OrderSummaryDto.from(o);
     }
@@ -325,7 +326,7 @@ public class AdminApi {
     }
 
     @GetMapping("/products/{id}")
-    public Product getProduct(@PathVariable Integer id) {
+    public Product getProduct(@PathVariable("id") Integer id) {
         return productRepository.findById(id).orElseThrow();
     }
 
@@ -335,14 +336,13 @@ public class AdminApi {
     }
 
     @PutMapping("/products/{id}")
-    public Product updateProduct(@PathVariable Integer id, @RequestBody Product p) {
-        // 단순 치환 갱신
+    public Product updateProduct(@PathVariable("id") Integer id, @RequestBody Product p) {
         p.setProductId(id);
         return productRepository.save(p);
     }
 
     @DeleteMapping("/products/{id}")
-    public void deleteProduct(@PathVariable Integer id) {
+    public void deleteProduct(@PathVariable("id") Integer id) {
         productRepository.deleteById(id);
     }
 
@@ -375,8 +375,8 @@ public class AdminApi {
         private Integer bouquetCode;
         private Integer productId;
         private String productName;
-        private Integer money;          // 주문 당시 라인 금액
-        private Integer bouquetTotal;   // 현재 부케 합계(참고용)
+        private Integer money;
+        private Integer bouquetTotal;
     }
 
     @Data @AllArgsConstructor @NoArgsConstructor
@@ -447,7 +447,7 @@ public class AdminApi {
         if (form.getFile() != null && !form.getFile().isEmpty()) {
             f.setImageName(saveImage(form.getFile(), form.getCategory()));
         } else {
-            f.setImageName(""); // 파일이 없으면 이미지명 공백 처리
+            f.setImageName("");
         }
         return flowerRepository.save(f);
     }
@@ -483,7 +483,7 @@ public class AdminApi {
         Path filePath = uploadPath.resolve(fileName);
         Files.copy(file.getInputStream(), filePath);
 
-        return fileName; // 이미지 파일명 반환
+        return fileName;
     }
 
     // 카테고리별 폴더 구분
@@ -494,7 +494,7 @@ public class AdminApi {
             case "잎사귀":
                 return "foliage";
             default:
-                return "main"; // 기본값은 'main'
+                return "main";
         }
     }
 
@@ -504,7 +504,7 @@ public class AdminApi {
         if (req.getShow() != null) {
             f.setShow(req.getShow());
         } else {
-            f.setShow(!f.isShow()); // 값 미지정 시 토글
+            f.setShow(!f.isShow());
         }
         return flowerRepository.save(f);
     }
@@ -523,7 +523,7 @@ public class AdminApi {
         private String flowerName;
         private String story;
         private Boolean show;
-        private MultipartFile file; // 파일 필드 추가
+        private MultipartFile file;
     }
 
     @Data @NoArgsConstructor @AllArgsConstructor
