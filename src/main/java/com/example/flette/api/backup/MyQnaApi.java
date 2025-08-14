@@ -1,4 +1,5 @@
-package com.example.flette.api;
+// com.example.flette.api.MyQnaApi
+package com.example.flette.api.backup;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,9 +20,11 @@ import com.example.flette.repository.QuestionRepository;
 
 import lombok.RequiredArgsConstructor;
 
+/*
 @RestController
 @RequestMapping("/api/mypage/qna")
 @RequiredArgsConstructor
+
 public class MyQnaApi {
 
     private final QuestionRepository questionRepository;
@@ -33,6 +36,7 @@ public class MyQnaApi {
         List<Question> list = questionRepository.findByUseridOrderByQuestionDateDesc(userid);
 
         List<QnaItemDTO> result = list.stream().map(q -> {
+            // 🚨 수정: findByQuestionId -> findByQuestion_QuestionId
             Optional<Answer> ansOpt = answerRepository.findByQuestion_QuestionId(q.getQuestionId());
             return QnaItemDTO.builder()
                     .questionId(q.getQuestionId())
@@ -51,9 +55,10 @@ public class MyQnaApi {
 
     // 상세
     @GetMapping("/{questionId}")
-    public ResponseEntity<QnaItemDTO> qnaDetail(@PathVariable("questionId") Integer questionId) {
+    public ResponseEntity<QnaItemDTO> qnaDetail(@PathVariable Integer questionId) {
         return questionRepository.findById(questionId)
                 .map(q -> {
+                    // 🚨 수정: findByQuestionId -> findByQuestion_QuestionId
                     Optional<Answer> ansOpt = answerRepository.findByQuestion_QuestionId(q.getQuestionId());
                     QnaItemDTO dto = QnaItemDTO.builder()
                             .questionId(q.getQuestionId())
@@ -75,3 +80,4 @@ public class MyQnaApi {
         return uid.substring(0, Math.min(3, uid.length())) + "****";
     }
 }
+*/
