@@ -1,5 +1,7 @@
 package com.example.flette.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
@@ -7,6 +9,7 @@ import lombok.ToString;
 @Getter
 @Setter
 @ToString
+@JsonIgnoreProperties(ignoreUnknown = true) // 이 어노테이션을 추가하여 알 수 없는 필드는 무시하도록 설정
 public class PaymentInfo {
     private String imp_uid;
     private String merchant_uid;
