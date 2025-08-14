@@ -91,10 +91,10 @@ public class ShopApi {
 		return map;
 	}
 	
-	@GetMapping("/{productId}/qa")
-	public List<Question> qaList(@PathVariable(name = "productId") Integer productId) {
-		return qr.findByProductId(productId);
-	}
+//	@GetMapping("/{productId}/qa")
+//	public List<Question> qaList(@PathVariable(name = "productId") Integer productId) {
+//		return qr.findByProductId(productId);
+//	}
 	
 	@PostMapping("/{productId}/qa/write")
 	public void addQues(@RequestBody Question ques) {

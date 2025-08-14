@@ -19,7 +19,7 @@ public interface QuestionRepository extends JpaRepository<Question, Integer> {
 	// 답변이 완료되지 않은 질문만 페이징 조회
 	Page<Question> findByStatusOrderByQuestionDateDesc(boolean status, Pageable pageable);
 	
-	List<Question> findByProductId(Integer productId);
+	Page<Question> findByProductId(Integer productId, Pageable pageable);
 	
 	// 암호화 질문 게시
     @Modifying
