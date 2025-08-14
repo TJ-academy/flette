@@ -40,9 +40,8 @@ public class MyPageApi {
 	// 사용자별 주문내역, 리뷰, 문의 개수를 반환하는 API
     @GetMapping("/stats")
     public ResponseEntity<?> getUserStats(@RequestParam(name = "userid") String userid) {
-    	String userId = userid;
         // 각 테이블에서 해당 userid 기준으로 개수 조회
-        long ordersCount = ordersRepository.countByUserId(userId);
+        long ordersCount = ordersRepository.countByUserid(userid);
         long reviewsCount = reviewRepository.countByWriter(userid);
         long questionsCount = questionRepository.countByUserid(userid);
 

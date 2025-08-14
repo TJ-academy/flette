@@ -23,7 +23,7 @@ public class Orders {
     @GeneratedValue(strategy = GenerationType.IDENTITY) // AUTO_INCREMENT 설정
 	private Integer orderId;
 	
-	private String userId; // userId로 변경
+	private String userid; 
 	private Integer money;
 	private Integer delivery;
 	private Integer totalMoney; // totalMoney로 변경
