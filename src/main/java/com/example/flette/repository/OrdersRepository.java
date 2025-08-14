@@ -1,12 +1,13 @@
 package com.example.flette.repository;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import com.example.flette.entity.Orders;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
 import java.util.Optional;
 
-public interface OrdersRepository  extends JpaRepository<Orders, Integer>, JpaSpecificationExecutor<Orders>  {
-	// 해당 userid로 주문 내역 개수를 조회
-    long countByUserid(String userid);
+@Repository
+public interface OrdersRepository extends JpaRepository<Orders, Long> {
     Optional<Orders> findByMerchantUid(String merchantUid);
+    long countByUserId(String userId); 
 }
