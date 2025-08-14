@@ -16,6 +16,7 @@ public class QnADTO {
 	private String title;
 	private String content;
 	private boolean status;
+	private String passwd;
 	private Date questionDate;
 	
 	private Integer answerId;
