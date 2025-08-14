@@ -1,10 +1,14 @@
 package com.example.flette.api;
 
-import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,10 +33,15 @@ public class MyQnaApi {
 
     // 목록: 내가 쓴 문의
     @GetMapping
-    public ResponseEntity<List<QnaItemDTO>> myQnaList(@RequestParam String userid) {
-        List<Question> list = questionRepository.findByUseridOrderByQuestionDateDesc(userid);
+    public ResponseEntity<Page<QnaItemDTO>> myQnaList(
+        @RequestParam(name = "userid") String userid,
+        @RequestParam(name = "page") int page,  // 페이지 번호
+        @RequestParam(name = "size") int size)  // 페이지 크기
+    {
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Order.desc("questionDate")));
+        Page<Question> questionsPage = questionRepository.findByUseridOrderByQuestionDateDesc(userid, pageable);
 
-        List<QnaItemDTO> result = list.stream().map(q -> {
+        Page<QnaItemDTO> result = questionsPage.map(q -> {
             Optional<Answer> ansOpt = answerRepository.findByQuestion_QuestionId(q.getQuestionId());
             return QnaItemDTO.builder()
                     .questionId(q.getQuestionId())
@@ -44,7 +53,7 @@ public class MyQnaApi {
                     .answerContent(ansOpt.map(Answer::getAnswerContent).orElse(null))
                     .answerDate(ansOpt.map(Answer::getAnswerDate).orElse(null))
                     .build();
-        }).collect(Collectors.toList());
+        });
 
         return ResponseEntity.ok(result);
     }
@@ -74,4 +83,23 @@ public class MyQnaApi {
         if (uid == null || uid.length() < 3) return "****";
         return uid.substring(0, Math.min(3, uid.length())) + "****";
     }
+    
+    // 문의 삭제
+    @Transactional
+    @DeleteMapping("/{questionId}")
+    public ResponseEntity<Void> deleteQuestion(@PathVariable("questionId") Integer questionId) {
+        // 먼저 Answer 테이블에서 해당 question_id와 연관된 답변을 삭제
+        answerRepository.deleteByQuestion_QuestionId(questionId);  // 이 메서드는 AnswerRepository에서 정의되어야 합니다.
+
+        // 그런 다음 Question 테이블에서 질문을 삭제
+        Optional<Question> questionOptional = questionRepository.findById(questionId);
+        if (questionOptional.isPresent()) {
+            questionRepository.deleteById(questionId);  // 해당 질문 삭제
+            return ResponseEntity.ok().build(); // 삭제 성공
+        } else {
+            return ResponseEntity.notFound().build(); // 질문이 존재하지 않으면 404 반환
+        }
+    }
+
+
 }

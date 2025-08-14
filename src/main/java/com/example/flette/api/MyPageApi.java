@@ -12,10 +12,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.flette.entity.Member;
 import com.example.flette.repository.MemberRepository;
+import com.example.flette.repository.OrdersRepository;
+import com.example.flette.repository.QuestionRepository;
+import com.example.flette.repository.ReviewRepository;
 
 @RestController
 @RequestMapping("/api/mypage")
@@ -23,7 +27,32 @@ public class MyPageApi {
 
 	@Autowired
 	MemberRepository memberRepository;
+	
+	@Autowired
+    private OrdersRepository ordersRepository;
 
+    @Autowired
+    private ReviewRepository reviewRepository;
+
+    @Autowired
+    private QuestionRepository questionRepository;
+
+	// 사용자별 주문내역, 리뷰, 문의 개수를 반환하는 API
+    @GetMapping("/stats")
+    public ResponseEntity<?> getUserStats(@RequestParam(name = "userid") String userid) {
+        // 각 테이블에서 해당 userid 기준으로 개수 조회
+        long ordersCount = ordersRepository.countByUserid(userid);
+        long reviewsCount = reviewRepository.countByWriter(userid);
+        long questionsCount = questionRepository.countByUserid(userid);
+
+        // 결과를 Map 형태로 반환
+        return ResponseEntity.ok(Map.of(
+            "ordersCount", ordersCount,
+            "reviewsCount", reviewsCount,
+            "questionsCount", questionsCount
+        ));
+    }
+	
 	// 회원 정보 조회
 	@GetMapping("/member/{userid}")
 	public ResponseEntity<Member> getMemberInfo(@PathVariable("userid") String userid) {
