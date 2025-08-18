@@ -22,11 +22,13 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.flette.dto.ProductDTO;
 import com.example.flette.dto.QnADTO;
 import com.example.flette.entity.Answer;
+import com.example.flette.entity.Decoration;
 import com.example.flette.entity.Flower;
 import com.example.flette.entity.Product;
 import com.example.flette.entity.Question;
 import com.example.flette.entity.Review;
 import com.example.flette.repository.AnswerRepository;
+import com.example.flette.repository.DecorationRepository;
 import com.example.flette.repository.FlowerRepository;
 import com.example.flette.repository.MemberRepository;
 import com.example.flette.repository.ProductRepository;
@@ -41,6 +43,9 @@ public class ShopApi {
 	
 	@Autowired
 	FlowerRepository fr;
+	
+	@Autowired
+	DecorationRepository dr;
 	
 	@Autowired
 	ReviewRepository rr;
@@ -66,18 +71,31 @@ public class ShopApi {
 	public Map<String, Object> detail(@PathVariable(name = "productId") Integer productId) {
 		Optional<Product> opt = pr.findById(productId);
 		Product p = opt.get();
-		ProductDTO dto = new ProductDTO();
-		dto.setProductId(p.getProductId());
-		dto.setProductName(p.getProductName());
-		dto.setImageName(p.getImageName());
-		dto.setBasicPrice(p.getBasicPrice());
-		dto.setDescription(p.getDescription());
+		ProductDTO dto = modelMapper.map(p, ProductDTO.class);
+		
 		Map<String, Object> map = new HashMap<>();
 		
-		List<Flower> flowerList = fr.findAll();
-		//System.out.println("리뷰 수 : " + rr.count());
 		map.put("dto", dto);
-		map.put("flowerList", flowerList);
+		return map;
+	}
+	
+	@GetMapping("/{productId}/info")
+	public Map<String, Object> info(@PathVariable(name = "productId") Integer productId) {
+		Optional<Product> opt = pr.findById(productId);
+		
+		Product p = opt.get();
+		ProductDTO dto = modelMapper.map(p, ProductDTO.class);
+		
+		Map<String, Object> map = new HashMap<>();
+		
+		map.put("dto", dto);
+		map.put("mfl", fr.findByCategoryAndShowTrue("메인"));
+		map.put("sfl", fr.findByCategoryAndShowTrue("서브"));
+		map.put("ffl", fr.findByCategoryAndShowTrue("잎사귀"));
+		
+		map.put("wdl", dr.findByCategoryAndShowTrue("포장지"));
+		map.put("adl", dr.findByCategoryAndShowTrue("기타"));
+//		System.out.println(map);
 		return map;
 	}
 	

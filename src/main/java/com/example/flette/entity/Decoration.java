@@ -1,9 +1,10 @@
 package com.example.flette.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
-import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,12 +13,17 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "decoration", indexes = @Index(name = "idx_decoration_id", columnList = "decorationId"))
 public class Decoration {
 	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private int decorationId;
 	
 	private String decorationName;
-	private Integer utilPrice; //단가
+	private String category;
+	private Integer utilPrice;
 	private String description;
+	private String imageName;
+	
+	@Column(name ="`show`")
+	private boolean show;
 }
