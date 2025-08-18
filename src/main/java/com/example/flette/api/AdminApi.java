@@ -353,7 +353,7 @@ public class AdminApi {
     static class OrderSummaryDto {
         private Integer orderId;
         private String userid;
-        private Integer money;
+        private String money;
         private Integer delivery;
         private Integer totalMoney;
         private String status;

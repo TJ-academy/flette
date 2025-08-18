@@ -24,7 +24,7 @@ public class Orders {
 	private Integer orderId;
 	
 	private String userid; 
-	private Integer money;
+	private String money;
 	private Integer delivery;
 	private Integer totalMoney; // totalMoney로 변경
 	private String orderAddress;
