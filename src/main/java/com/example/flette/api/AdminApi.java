@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -160,32 +161,39 @@ public class AdminApi {
 
     /** 답변 등록 */
     @PostMapping("/qna/{questionId}/answer")
-    public ResponseEntity<Answer> createAnswer(@PathVariable("questionId") Integer questionId, @RequestBody Answer answerDto) {
+    public ResponseEntity<Answer> createAnswer(
+            @PathVariable("questionId") Integer questionId, 
+            @RequestBody Answer answerDto) {
+
         Question question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new RuntimeException("Question not found with id: " + questionId));
-        
+
         Answer newAnswer = new Answer();
         newAnswer.setQuestion(question);
         newAnswer.setAnswerContent(answerDto.getAnswerContent());
-        newAnswer.setAnswerDate(new Date());
+        newAnswer.setAnswerDate(LocalDateTime.now()); // ✅ LocalDateTime 사용
 
         Answer savedAnswer = answerRepository.save(newAnswer);
 
         question.setStatus(true);
         questionRepository.save(question);
-        
+
         return ResponseEntity.ok(savedAnswer);
     }
+
     /** 답변 수정 */
     @PutMapping("/qna/{questionId}/answer")
     @Transactional
-    public ResponseEntity<QnaItemDTO> updateAnswer(@PathVariable("questionId") Integer questionId, @RequestBody Answer req) {
+    public ResponseEntity<QnaItemDTO> updateAnswer(
+            @PathVariable("questionId") Integer questionId, 
+            @RequestBody Answer req) {
+
         Optional<Answer> ansOpt = answerRepository.findByQuestion_QuestionId(questionId);
         if (ansOpt.isEmpty()) return ResponseEntity.notFound().build();
 
         Answer a = ansOpt.get();
         a.setAnswerContent(req.getAnswerContent());
-        a.setAnswerDate(new java.util.Date());
+        a.setAnswerDate(LocalDateTime.now()); // ✅ LocalDateTime 사용
         answerRepository.save(a);
 
         return getQna(questionId);
@@ -349,7 +357,9 @@ public class AdminApi {
     }
 
     // ========================= DTO / 요청 객체 =========================
-    @Data @AllArgsConstructor @NoArgsConstructor
+    @Data
+    @AllArgsConstructor
+    @NoArgsConstructor
     static class OrderSummaryDto {
         private Integer orderId;
         private String userid;
@@ -357,18 +367,25 @@ public class AdminApi {
         private Integer delivery;
         private Integer totalMoney;
         private String status;
-        private java.util.Date orderDate;
+        private LocalDateTime orderDate; // ✅ java.util.Date → LocalDateTime
         private String method;
         private String bank;
 
         static OrderSummaryDto from(Orders o) {
             return new OrderSummaryDto(
-                    o.getOrderId(), o.getUserid(), o.getMoney(), o.getDelivery(),
-                    o.getTotalMoney(), o.getStatus(), o.getOrderDate(),
-                    o.getMethod(), o.getBank()
+                    o.getOrderId(), 
+                    o.getUserid(), 
+                    o.getMoney(), 
+                    o.getDelivery(),
+                    o.getTotalMoney(), 
+                    o.getStatus(), 
+                    o.getOrderDate(),  // ✅ Orders에서 LocalDateTime을 그대로 가져옴
+                    o.getMethod(), 
+                    o.getBank()
             );
         }
     }
+
 
     @Data @AllArgsConstructor @NoArgsConstructor
     static class OrderLineDto {

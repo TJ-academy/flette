@@ -1,5 +1,6 @@
 package com.example.flette.api.backup;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -98,17 +99,21 @@ public class ShopApi {
 	
 	@PostMapping("/{productId}/qa/write")
 	public void addQues(@RequestBody Question ques) {
-		String passwd = ques.getPasswd();
+	    String passwd = ques.getPasswd();
 	    if (passwd == null || passwd.trim().isEmpty()) {
 	        passwd = null;
 	    }
-	    
-		qr.addQues(
-				ques.getProductId(), 
-				ques.getUserid(), 
-				ques.getTitle(), 
-				ques.getContent(), 
-				passwd);
+
+	    // 등록 시점 자동 저장
+	    ques.setQuestionDate(LocalDateTime.now());
+
+	    // 비밀번호 해시 저장 (DB에서 SHA2 처리하는 대신 자바에서 처리 가능)
+	    if (passwd != null) {
+	        String hashed = org.springframework.util.DigestUtils.md5DigestAsHex(passwd.getBytes()); // or SHA256 라이브러리
+	        ques.setPasswd(hashed);
+	    }
+
+	    qr.save(ques); // ✅ JPA 기본 저장 메서드 사용
 	}
 	
 	@PostMapping("/{productId}/qa/{questionId}/check")

@@ -1,5 +1,6 @@
 package com.example.flette.entity;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 import jakarta.persistence.Entity;
@@ -26,5 +27,5 @@ public class Answer {
 	private Question question; // 🚨 변수명을 questionId에서 question으로 변경하는 것이 더 자연스럽습니다.
 	
 	private String answerContent;
-	private Date answerDate;
+	private LocalDateTime answerDate;
 }

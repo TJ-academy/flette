@@ -1,5 +1,6 @@
 package com.example.flette.entity;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 import jakarta.persistence.Column;
@@ -29,5 +30,6 @@ public class Question {
 	private boolean status = false;
 	
 	private String passwd;
-	private Date questionDate;
+	private LocalDateTime questionDate;
 }
+

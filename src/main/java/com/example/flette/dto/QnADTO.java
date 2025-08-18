@@ -1,5 +1,6 @@
 package com.example.flette.dto;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 import lombok.AllArgsConstructor;
@@ -17,9 +18,9 @@ public class QnADTO {
 	private String content;
 	private boolean status;
 	private String passwd;
-	private Date questionDate;
+	private LocalDateTime questionDate;
 	
 	private Integer answerId;
 	private String answerContent;
-	private Date answerDate;
+	private LocalDateTime answerDate;
 }

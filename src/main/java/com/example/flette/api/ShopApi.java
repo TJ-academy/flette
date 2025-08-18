@@ -32,6 +32,9 @@ import com.example.flette.repository.QuestionRepository;
 import com.example.flette.repository.ReviewRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import java.time.LocalDateTime;
+import org.apache.commons.codec.digest.DigestUtils;
+
 
 @RestController
 @RequestMapping("/api/shop")
@@ -78,7 +81,7 @@ public class ShopApi {
                     .body(Map.of("error", "상품 없음", "productId", productId));
         }
         ProductDTO dto = modelMapper.map(opt.get(), ProductDTO.class);
-        return ResponseEntity.ok(dto);
+        return ResponseEntity.ok(Map.of("dto", dto));  // ✅ dto key로 감싸서 반환
     }
 
     // 상품 정보 (부자재 포함)
@@ -150,16 +153,18 @@ public class ShopApi {
     }
 
     // Q&A 작성
+ // Q&A 작성
     @PostMapping("/{productId}/qa/write")
     public void addQues(@RequestBody Question ques) {
-        String passwd = (ques.getPasswd() == null || ques.getPasswd().trim().isEmpty())
-                ? null : ques.getPasswd();
+        ques.setStatus(false);   // 답변 안 된 상태
+        ques.setQuestionDate(LocalDateTime.now());
+        
+        // 비밀번호 암호화
+        if (ques.getPasswd() != null && !ques.getPasswd().trim().isEmpty()) {
+            ques.setPasswd(DigestUtils.sha256Hex(ques.getPasswd()));
+        }
 
-        qr.addQues(ques.getProductId(),
-                ques.getUserid(),
-                ques.getTitle(),
-                ques.getContent(),
-                passwd);
+        qr.save(ques);   // ✅ JPA가 자동으로 INSERT
     }
 
     // Q&A 비밀번호 체크

@@ -1,14 +1,10 @@
 package com.example.flette.entity;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 import org.hibernate.annotations.CreationTimestamp;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,27 +13,51 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "orders") // 테이블 이름이 'Orders'가 아닌 'orders'일 경우 매핑
+@Table(name = "orders")
 public class Orders {
-	@Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY) // AUTO_INCREMENT 설정
-	private Integer orderId;
-	
-	private String userid; 
-	private String money;
-	private Integer delivery;
-	private Integer totalMoney; // totalMoney로 변경
-	private String orderAddress;
-	
-    @CreationTimestamp // 엔티티 생성 시 자동으로 현재 시간 저장
-	private Date orderDate;
-	
-	private String method;
-	private String bank;
-	private Integer account;
-	private String status;
-	
-	private String merchantUid; // merchantUid로 변경
-	private String impUid; // impUid로 변경
-	private String refundReason; // refundReason으로 변경
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "order_id")   // ✅ 매핑
+    private Integer orderId;
+
+    @Column(name = "userid")     // ✅ 그대로 매핑
+    private String userid;
+
+    @Column(name = "money")
+    private String money;
+
+    @Column(name = "delivery")
+    private Integer delivery;
+
+    @Column(name = "total_money")  // ✅ snake_case
+    private Integer totalMoney;
+
+    @Column(name = "order_address")
+    private String orderAddress;
+
+    @CreationTimestamp
+    @Column(name = "order_date")
+    private LocalDateTime orderDate;  // ✅ Date → LocalDateTime 변경 추천
+
+    @Column(name = "method")
+    private String method;
+
+    @Column(name = "bank")
+    private String bank;
+
+    @Column(name = "account")
+    private Integer account;
+
+    @Column(name = "status")
+    private String status;
+
+    @Column(name = "merchant_uid")   // ✅ snake_case
+    private String merchantUid;
+
+    @Column(name = "imp_uid")        // ✅ snake_case
+    private String impUid;
+
+    @Column(name = "refund_reason")  // ✅ snake_case
+    private String refundReason;
 }

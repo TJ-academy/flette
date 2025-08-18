@@ -1,5 +1,6 @@
 package com.example.flette.dto;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -16,7 +17,7 @@ public class OrderDetailDTO {
     // Orders 테이블에서 가져올 정보 (주문 전체 정보)
     private Integer orderId;
     private String impUid;
-    private Date orderDate;
+    private LocalDateTime orderDate;
     private String status;
     private Integer totalMoney;
     private String userid; // 'userId'로 통일하는 것이 좋습니다 (자바 컨벤션)

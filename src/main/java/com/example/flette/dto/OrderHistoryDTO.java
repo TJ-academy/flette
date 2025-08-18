@@ -1,5 +1,6 @@
 package com.example.flette.dto;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 
@@ -10,7 +11,7 @@ import lombok.Setter;
 @Data
 public class OrderHistoryDTO {
 	private int orderId;
-	private Date orderDate;
+	private LocalDateTime orderDate;
 	private String status;
 	
 	private List<OrderHistoryDetailDTO> details;

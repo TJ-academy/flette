@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Getter
@@ -27,7 +28,7 @@ public class ReviewProductDetailDTO {
 
     // 주문 정보 (리뷰 작성 시 필요할 수 있는 연관 정보)
     private Integer orderId;
-    private Date orderDate;
+    private LocalDateTime orderDate;
     private String userId; // 주문자 ID
 
     // 기타 (필요시 추가)

@@ -1,5 +1,6 @@
 package com.example.flette.dto;
 
+import java.time.LocalDateTime;
 import java.util.Date;
 
 import lombok.AllArgsConstructor;
@@ -16,10 +17,10 @@ public class QnaItemDTO {
 	private String title;
 	private String writerMasked; // guy**** 형태
 	private boolean answered; // true/false
-	private Date questionDate;
+	private LocalDateTime questionDate;
 	private String questionContent;
 
 	// answer (nullable)
 	private String answerContent;
-	private Date answerDate;
+	private LocalDateTime answerDate;
 }
