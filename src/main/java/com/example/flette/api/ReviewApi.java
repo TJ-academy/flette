@@ -13,8 +13,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*; // PostMapping, RequestBody 임포트
-
+import org.springframework.web.multipart.MultipartFile; // MultipartFile 추가
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Date;
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/reviews")
@@ -37,6 +43,9 @@ public class ReviewApi {
 
     @Autowired
     private ReviewRepository reviewRepository; // ReviewRepository 추가
+
+    // 이미지 파일을 저장할 서버 내 경로
+    private static final String UPLOAD_DIR = "src/main/resources/static/img/reviews/";
 
     /**
      * 리뷰 작성 페이지에 필요한 상품 및 주문 정보를 조회하는 API
@@ -113,30 +122,57 @@ public class ReviewApi {
      * 리뷰를 저장하는 API
      * URL: /api/reviews/save
      *
-     * @param reviewDto 리뷰 정보를 담고 있는 DTO
+     * @param reviewData 리뷰 정보를 담고 있는 DTO (JSON 데이터)
+     * @param reviewImages 업로드된 이미지 파일
      * @return 성공 메시지 또는 에러 메시지
      */
     @PostMapping("/save")
-    public ResponseEntity<?> saveReview(@RequestBody ReviewRequestDTO reviewDto) {
+    public ResponseEntity<String> saveReview(@RequestPart("reviewData") ReviewRequestDTO reviewData,
+                                             @RequestPart(value = "reviewImages", required = false) MultipartFile[] reviewImages) {
         try {
+            // 리뷰 이미지 파일 저장
+            if (reviewImages != null && reviewImages.length > 0) {
+                MultipartFile firstImage = reviewImages[0];
+                String originalFilename = firstImage.getOriginalFilename();
+                String fileExtension = "";
+                if (originalFilename != null && originalFilename.contains(".")) {
+                    fileExtension = originalFilename.substring(originalFilename.lastIndexOf("."));
+                }
+                String uniqueFilename = UUID.randomUUID().toString() + fileExtension;
+                Path uploadPath = Paths.get(UPLOAD_DIR);
+
+                if (!Files.exists(uploadPath)) {
+                    Files.createDirectories(uploadPath);
+                }
+
+                Path filePath = uploadPath.resolve(uniqueFilename);
+                Files.copy(firstImage.getInputStream(), filePath);
+
+                // DTO에 저장된 파일명 설정
+                reviewData.setReviewImage(uniqueFilename);
+            }
+
             // DTO를 Review 엔티티로 변환
             Review review = new Review();
-            review.setBouquetCode(reviewDto.getBouquetCode());
-            review.setLuv(0); // 초기 좋아요 수는 0으로 설정
-            review.setProductId(reviewDto.getProductId());
-            review.setReviewContent(reviewDto.getReviewContent());
-            review.setReviewImage(reviewDto.getReviewImage());
-            review.setScore(reviewDto.getScore());
-            review.setWriter(reviewDto.getWriter());
+            review.setBouquetCode(reviewData.getBouquetCode());
+            review.setLuv(0);
+            review.setProductId(reviewData.getProductId());
+            review.setReviewContent(reviewData.getReviewContent());
+            review.setReviewImage(reviewData.getReviewImage()); // 저장된 파일명으로 설정
+            review.setScore(reviewData.getScore());
+            review.setWriter(reviewData.getWriter());
             review.setReviewDate(new java.util.Date()); // 현재 날짜로 설정
 
             // Repository를 사용하여 DB에 저장
-            Review savedReview = reviewRepository.save(review);
+            reviewRepository.save(review);
             
-            return new ResponseEntity<>("리뷰가 성공적으로 저장되었습니다. (ID: " + savedReview.getReviewId() + ")", HttpStatus.CREATED);
+            return ResponseEntity.ok("리뷰가 성공적으로 저장되었습니다.");
+        } catch (IOException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("이미지 파일 저장에 실패했습니다.");
         } catch (Exception e) {
             e.printStackTrace();
-            return new ResponseEntity<>("리뷰 저장에 실패했습니다. 오류: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("리뷰 저장에 실패했습니다.");
         }
     }
 }
