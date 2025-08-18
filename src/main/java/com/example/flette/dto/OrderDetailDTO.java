@@ -14,4 +14,6 @@ public class OrderDetailDTO {
 	private Integer orderId;
 	private Integer bouquetCode;
 	private Integer money;
+	private String productName;
+	private String imageName;
 }
