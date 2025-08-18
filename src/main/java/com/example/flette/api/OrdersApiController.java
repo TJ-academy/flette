@@ -1,6 +1,8 @@
 package com.example.flette.api;
 
 import com.example.flette.dto.IamportResponse;
+import com.example.flette.dto.OrderDetailDTO;
+import com.example.flette.dto.OrderHistoryDTO;
 import com.example.flette.dto.PaymentInfo;
 import com.example.flette.entity.Orders;
 import com.example.flette.repository.OrdersRepository;
@@ -12,6 +14,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.ArrayList;
+import com.example.flette.entity.Bouquet;
+import com.example.flette.entity.OrderDetail;
+import com.example.flette.entity.Product;
+import com.example.flette.repository.BouquetRepository;
+import com.example.flette.repository.OrderDetailRepository;
+import com.example.flette.repository.ProductRepository;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -22,7 +31,17 @@ public class OrdersApiController {
 
     @Autowired
     private IamportService iamportService;
+    
+    @Autowired
+    private OrderDetailRepository orderDetailRepository;
 
+    @Autowired
+    private BouquetRepository bouquetRepository;
+
+    @Autowired
+    private ProductRepository productRepository;
+
+    //------결제 관련 로직------------------------------------------------
     // 결제 요청 DTO (필요에 따라 필드 추가)
     public static class PaymentRequestDto {
         public String merchant_uid;
@@ -33,7 +52,7 @@ public class OrdersApiController {
         // 기타 필요한 필드 추가
     }
 
-    // 결제 검증 DTO
+    // 결제 위변조 검증 DTO
     public static class PaymentVerificationDto {
         public String imp_uid;
         public String merchant_uid;
@@ -44,21 +63,15 @@ public class OrdersApiController {
     @PostMapping("/prepare")
     public ResponseEntity<?> preparePayment(@RequestBody PaymentRequestDto requestDto) {
         try {
-            // 여기서는 merchant_uid를 프론트엔드에서 생성했다고 가정합니다.
-            // 백엔드에서 생성하고 싶다면 UUID.randomUUID() 등을 사용할 수 있습니다.
-
-            // 아임포트 API 토큰 발급
             String accessToken = iamportService.getAccessToken();
             if (accessToken == null) {
                 return new ResponseEntity<>("아임포트 토큰 발급 실패", HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
-            // DB에 주문 정보를 미리 저장 (상태는 '결제대기' 등)
             Orders newOrder = new Orders();
             newOrder.setMerchantUid(requestDto.merchant_uid);
-            newOrder.setTotalMoney(requestDto.amount); // 금액 저장
-            newOrder.setStatus("결제대기"); // 초기 상태 설정
-            // ... 다른 정보도 설정
+            newOrder.setTotalMoney(requestDto.amount);
+            newOrder.setStatus("결제대기");
             ordersRepository.save(newOrder);
 
             return new ResponseEntity<>(requestDto.merchant_uid, HttpStatus.OK);
@@ -73,45 +86,36 @@ public class OrdersApiController {
     @PostMapping("/verify")
     public ResponseEntity<?> verifyPayment(@RequestBody PaymentVerificationDto verifyDto) {
         try {
-            // 1. 아임포트 API 토큰 발급
             String accessToken = iamportService.getAccessToken();
             if (accessToken == null) {
                 return new ResponseEntity<>("아임포트 토큰 발급 실패", HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
-            // 2. imp_uid로 아임포트 서버에서 실제 결제 정보 조회
             IamportResponse<PaymentInfo> paymentInfoResponse = iamportService.getPaymentInfo(accessToken, verifyDto.imp_uid);
             
-            // 결제 정보가 존재하지 않거나, 응답 코드가 0이 아닌 경우 에러 처리
             if (paymentInfoResponse == null || paymentInfoResponse.getCode() != 0 || paymentInfoResponse.getResponse() == null) {
                 return new ResponseEntity<>("아임포트 결제 정보 조회 실패", HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
             PaymentInfo paymentInfo = paymentInfoResponse.getResponse();
-            int actualAmount = paymentInfo.getAmount(); // 실제 결제 금액
-            String status = paymentInfo.getStatus(); // 결제 상태
+            int actualAmount = paymentInfo.getAmount();
+            String status = paymentInfo.getStatus();
 
-            // 3. merchant_uid로 DB에 저장된 주문 금액 조회
             Optional<Orders> orderOptional = ordersRepository.findByMerchantUid(verifyDto.merchant_uid);
 
             if (orderOptional.isEmpty()) {
-                // 이 경우, 사전 등록된 주문이 없으므로 결제 취소 등의 추가 로직이 필요
                 return new ResponseEntity<>("DB에 존재하지 않는 주문 번호입니다.", HttpStatus.BAD_REQUEST);
             }
             
             Orders savedOrder = orderOptional.get();
-            int savedAmount = savedOrder.getTotalMoney(); // DB에 저장된 금액
+            int savedAmount = savedOrder.getTotalMoney();
 
-            // 4. 결제 금액 검증 및 상태 업데이트
             if (savedAmount == actualAmount && "paid".equals(status)) {
                 savedOrder.setImpUid(verifyDto.imp_uid);
-                savedOrder.setStatus("결제완료"); // 주문 상태 업데이트
+                savedOrder.setStatus("결제완료");
                 ordersRepository.save(savedOrder);
                 return new ResponseEntity<>("결제 성공 및 DB 업데이트 완료", HttpStatus.OK);
             } else {
-                // 결제 위변조 또는 실패한 경우
-                // TODO: 결제 취소 로직을 여기에 추가할 수 있습니다.
-                // iamportService.cancelPayment(accessToken, verifyDto.imp_uid);
                 return new ResponseEntity<>("결제 위변조 또는 실패", HttpStatus.BAD_REQUEST);
             }
 
@@ -123,10 +127,60 @@ public class OrdersApiController {
     
     @GetMapping
     public ResponseEntity<List<Orders>> getAllOrders() {
-        // ordersRepository를 사용하여 Orders 테이블의 모든 데이터를 조회합니다.
         List<Orders> ordersList = ordersRepository.findAll();
-        // 조회된 리스트를 성공 응답과 함께 반환합니다.
         return new ResponseEntity<>(ordersList, HttpStatus.OK);
     }
+    //--------------------------------------------------------------------
 
+    /**
+     * 특정 사용자의 주문 내역을 상세 정보와 함께 조회하는 API.
+     * @param userId 조회할 사용자의 ID
+     * @return 주문 내역 리스트 (OrderHistoryDto)
+     */
+    @GetMapping("/history/{userid}")
+    public ResponseEntity<List<OrderHistoryDTO>> getUserOrdersWithDetails(@PathVariable("userid") String userid) {
+        // 1. userId로 해당 사용자의 모든 주문(Orders) 정보를 조회
+        List<Orders> ordersList = ordersRepository.findByUseridOrderByOrderDateDesc(userid);
+
+        // 2. 각 주문에 대해 주문 상세 정보(OrderDetail)를 포함한 DTO를 생성
+        List<OrderHistoryDTO> historyList = new ArrayList<>();
+        
+        for (Orders order : ordersList) {
+            OrderHistoryDTO historyDto = new OrderHistoryDTO();
+            historyDto.setOrderId(order.getOrderId());
+            historyDto.setOrderDate(order.getOrderDate());
+            historyDto.setStatus(order.getStatus());
+
+            // 3. 해당 order_id를 가진 모든 order_detail 정보를 조회
+            List<OrderDetail> details = orderDetailRepository.findByOrderId(order.getOrderId());
+
+            // 4. 각 order_detail에 대해 상품 정보(Product)를 조회
+            List<OrderDetailDTO> detailDtos = new ArrayList<>();
+            for (OrderDetail detail : details) {
+                OrderDetailDTO detailDto = new OrderDetailDTO();
+                detailDto.setDetailId(detail.getDetailId());
+                detailDto.setMoney(detail.getMoney());
+
+                // 5. bouquet_code로 bouquet 테이블에서 product_id를 조회
+                Optional<Bouquet> bouquetOpt = bouquetRepository.findById(detail.getBouquetCode());
+                if (bouquetOpt.isPresent()) {
+                    Bouquet bouquet = bouquetOpt.get();
+                    
+                    // 6. product_id로 product 테이블에서 image_name과 product_name을 조회
+                    Optional<Product> productOpt = productRepository.findById(bouquet.getProductId());
+                    if (productOpt.isPresent()) {
+                        Product product = productOpt.get();
+                        detailDto.setProductName(product.getProductName());
+                        detailDto.setImageName(product.getImageName());
+                    }
+                }
+                detailDtos.add(detailDto);
+            }
+            historyDto.setDetails(detailDtos);
+            historyList.add(historyDto);
+        }
+
+        // 7. 완성된 주문 내역 리스트를 반환
+        return new ResponseEntity<>(historyList, HttpStatus.OK);
+    }
 }
