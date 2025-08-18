@@ -9,13 +9,17 @@ import org.springframework.web.bind.annotation.*;
 
 import com.example.flette.dto.MyPageStatsDTO;
 import com.example.flette.entity.Member;
+import com.example.flette.entity.OrderDetail;
 import com.example.flette.entity.Orders;
+import com.example.flette.entity.Product; // Product 엔티티 임포트
 import com.example.flette.entity.Review;
 import com.example.flette.entity.Question;
 import com.example.flette.repository.MemberRepository;
+import com.example.flette.repository.OrderDetailRepository;
 import com.example.flette.repository.OrdersRepository;
 import com.example.flette.repository.ReviewRepository;
 import com.example.flette.repository.QuestionRepository;
+import com.example.flette.repository.ProductRepository; // ProductRepository 임포트
 
 @RestController
 @RequestMapping("/api/mypage")
@@ -32,6 +36,12 @@ public class MyPageApi {
 
     @Autowired
     private QuestionRepository questionRepository;
+    
+    @Autowired
+    private OrderDetailRepository orderDetailRepository;
+
+    @Autowired
+    private ProductRepository productRepository; // ProductRepository 주입
 
     // 📌 마이페이지 통계
     @GetMapping("/stats")
@@ -124,13 +134,61 @@ public class MyPageApi {
     	List<Orders> orders = ordersRepository.findByUseridOrderByOrderDateDesc(userid);
         return ResponseEntity.ok(orders);
     }
-
-    // 📌 리뷰 조회
+    
+	 // 📌 리뷰 조회 (작성할 후기, 작성 완료 후기 분류)
     @GetMapping("/reviews/{userid}")
     public ResponseEntity<Map<String, Object>> getUserReviews(@PathVariable("userid") String userid) {
-        List<Review> rlist = reviewRepository.findByWriter(userid);
+    	// 작성할 후기 리스트
+        List<Map<String, Object>> todoList = new ArrayList<>();
+        // 작성 완료 후기 리스트
+        List<Map<String, Object>> doneList = new ArrayList<>();
+
+    	// 유저의 모든 주문 내역 조회
+        List<Orders> userOrders = ordersRepository.findByUseridOrderByOrderDateDesc(userid);
+
+        for (Orders order : userOrders) {
+            // 주문에 포함된 모든 상품(OrderDetails) 조회
+            List<OrderDetail> orderDetails = orderDetailRepository.findByOrderId(order.getOrderId());
+
+            for (OrderDetail detail : orderDetails) {
+                // 해당 bouquet_code로 작성된 리뷰가 있는지 확인하고 리뷰 객체를 가져옴
+                Optional<Review> optionalReview = reviewRepository.findByBouquetCode(detail.getBouquetCode());
+
+                Map<String, Object> item = new HashMap<>();
+                item.put("orderId", order.getOrderId());
+                item.put("bouquetCode", detail.getBouquetCode());
+                
+                // ProductRepository를 사용하여 bouquet_code로 상품 이름 조회
+                Optional<Product> optionalProduct = productRepository.findById(detail.getBouquetCode());
+                if(optionalProduct.isPresent()) {
+                    item.put("productName", optionalProduct.get().getProductName());
+                } else {
+                    item.put("productName", "알 수 없는 상품");
+                }
+                
+                item.put("price", detail.getMoney());
+                item.put("orderDate", order.getOrderDate());
+                
+                if (optionalReview.isPresent()) {
+                    // 작성 완료 후기
+                    Review review = optionalReview.get();
+                    item.put("reviewId", review.getReviewId());
+                    item.put("reviewContent", review.getReviewContent());
+                    item.put("score", review.getScore());
+                    item.put("reviewDate", review.getReviewDate());
+                    item.put("reviewImage", review.getReviewImage());
+                    item.put("writer", review.getWriter());
+                    doneList.add(item);
+                } else {
+                    // 작성할 후기
+                    todoList.add(item);
+                }
+            }
+        }
+
         Map<String, Object> result = new HashMap<>();
-        result.put("rlist", rlist);
+        result.put("todoList", todoList);
+        result.put("doneList", doneList);
         return ResponseEntity.ok(result);
     }
 

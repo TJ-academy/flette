@@ -4,6 +4,7 @@ import com.example.flette.entity.Review;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface ReviewRepository extends JpaRepository<Review, Integer> {
 
@@ -18,4 +19,7 @@ public interface ReviewRepository extends JpaRepository<Review, Integer> {
 
     // 특정 bouquetCode에 리뷰가 존재하는지 확인
     boolean existsByBouquetCode(Integer bouquetCode);
+
+    // 특정 bouquetCode에 해당하는 리뷰 객체 조회
+    Optional<Review> findByBouquetCode(Integer bouquetCode);
 }
