@@ -14,18 +14,18 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Decoration {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
-	private int decorationId;
-	
-	private String decorationName;
-	private String category;
-	private Integer utilPrice;
-	private String description;
-	
-	@Column(name = "image_name")
-	private String imageName;
-	
-	@Column(name ="`show`")
-	private boolean show;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private int decorationId;
+
+    private String decorationName;
+
+    private Integer utilPrice; // 단가
+    private String description;
+
+    @Column(name = "image_name")
+    private String imageName;
+
+
 }

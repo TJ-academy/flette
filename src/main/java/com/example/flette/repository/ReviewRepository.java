@@ -1,17 +1,21 @@
 package com.example.flette.repository;
 
-import java.util.List;
-
+import com.example.flette.entity.Review;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-import com.example.flette.entity.Review;
+import java.util.List;
 
 public interface ReviewRepository extends JpaRepository<Review, Integer> {
-	List<Review> findByProductId(Integer productId);
-	
-	// 해당 userid로 작성된 리뷰 개수를 조회
+
+    // 상품별 리뷰 조회
+    List<Review> findByProductId(Integer productId);
+
+    // 사용자별 리뷰 리스트 조회
+    List<Review> findByWriter(String writer);
+
+    // 사용자별 리뷰 개수 조회
     long countByWriter(String writer);
 
-    // 해당 bouquetCode로 작성된 리뷰가 있는지 확인하는 메서드 추가
+    // 특정 bouquetCode에 리뷰가 존재하는지 확인
     boolean existsByBouquetCode(Integer bouquetCode);
 }

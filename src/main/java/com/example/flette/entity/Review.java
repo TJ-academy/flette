@@ -2,32 +2,45 @@ package com.example.flette.entity;
 
 import java.util.Date;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table; // @Table 어노테이션 추가
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
+@Table(name = "review") // ⭐ DB 테이블명 매핑
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "review") 
 public class Review {
-	
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY) 
-	private Integer reviewId;
-	
-	private Integer bouquetCode;
-	private Integer productId;
-	private Integer score;
-	private String writer;
-	private String reviewContent;
-	private String reviewImage;
-	private Date reviewDate;
-	private Integer luv;
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // AUTO_INCREMENT
+    @Column(name = "review_id")
+    private Integer reviewId;
+
+    @Column(name = "bouquet_code")
+    private Integer bouquetCode;
+
+    @Column(name = "product_id")
+    private Integer productId;
+
+    @Column(name = "score")
+    private Integer score;
+
+    @Column(name = "writer")
+    private String writer;
+
+    @Column(name = "review_content")
+    private String reviewContent;
+
+    @Column(name = "review_image")
+    private String reviewImage;
+
+    @Column(name = "review_date")
+    @Temporal(TemporalType.TIMESTAMP) // DATETIME 매핑
+    private Date reviewDate;
+
+    @Column(name = "luv")
+    private Integer luv;
 }
