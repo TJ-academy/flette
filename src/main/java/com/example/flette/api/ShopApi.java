@@ -67,6 +67,7 @@ public class ShopApi {
 	
 	@GetMapping
 	public List<Product> list() {
+		System.out.println(pr.findAll());
 		return pr.findAll();
 	}
 	
@@ -77,7 +78,6 @@ public class ShopApi {
 		ProductDTO dto = modelMapper.map(p, ProductDTO.class);
 		
 		Map<String, Object> map = new HashMap<>();
-		
 		map.put("dto", dto);
 		return map;
 	}

@@ -19,12 +19,11 @@ public class ProductDTO {
 	
 	public ProductDTO(Integer productId, String productName,
             String imageName, Integer basicPrice,
-            String summary, String description) {
+            String description) {
 		this.productId = productId;
 		this.productName = productName;
 		this.imageName = imageName;
 		this.basicPrice = basicPrice;
-		this.summary = summary;
 		this.description = description;
 		}
 }
