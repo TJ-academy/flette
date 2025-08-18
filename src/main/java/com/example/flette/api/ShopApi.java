@@ -7,25 +7,29 @@ import java.util.Optional;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.servlet.ModelAndView;
 
 import com.example.flette.dto.ProductDTO;
 import com.example.flette.dto.QnADTO;
 import com.example.flette.entity.Answer;
-import com.example.flette.entity.Flower;
-import com.example.flette.entity.Member;
+import com.example.flette.entity.Bouquet;
 import com.example.flette.entity.Product;
 import com.example.flette.entity.Question;
 import com.example.flette.entity.Review;
+import com.example.flette.entity.Flower;
 import com.example.flette.repository.AnswerRepository;
+import com.example.flette.repository.BouquetRepository;
+import com.example.flette.repository.DecorationRepository;
 import com.example.flette.repository.FlowerRepository;
 import com.example.flette.repository.MemberRepository;
 import com.example.flette.repository.ProductRepository;
@@ -35,26 +39,33 @@ import com.example.flette.repository.ReviewRepository;
 @RestController
 @RequestMapping("/api/shop")
 public class ShopApi {
-	@Autowired
-	ProductRepository pr;
-	
-	@Autowired
-	FlowerRepository fr;
-	
-	@Autowired
-	ReviewRepository rr;
-	
-	@Autowired
-	QuestionRepository qr;
-	
-	@Autowired
-	AnswerRepository ar;
-	
-	@Autowired
-	MemberRepository mr;
-	
-	@Autowired
-	ModelMapper modelMapper;
+   @Autowired
+   ProductRepository pr;
+   
+   @Autowired
+   FlowerRepository fr;
+   
+   @Autowired
+   DecorationRepository dr;
+   
+   @Autowired
+   BouquetRepository br;
+   
+   @Autowired
+   ReviewRepository rr;
+   
+   @Autowired
+   QuestionRepository qr;
+   
+   @Autowired
+   AnswerRepository ar;
+   
+   @Autowired
+   MemberRepository mr;
+   
+   @Autowired
+   ModelMapper modelMapper;
+
 	
 	@GetMapping
 	public List<Product> list() {
@@ -63,32 +74,55 @@ public class ShopApi {
 	
 	@GetMapping("/{productId}/detail")
 	public Map<String, Object> detail(@PathVariable(name = "productId") Integer productId) {
-		Optional<Product> opt = pr.findById(productId);
-		Product p = opt.get();
-		ProductDTO dto = new ProductDTO();
-		dto.setProductId(p.getProductId());
-		dto.setProductName(p.getProductName());
-		dto.setImageName(p.getImageName());
-		dto.setBasicPrice(p.getBasicPrice());
-		dto.setDescription(p.getDescription());
-		Map<String, Object> map = new HashMap<>();
-		
-		List<Flower> flowerList = fr.findAll();
-		//System.out.println("리뷰 수 : " + rr.count());
-		map.put("dto", dto);
-		map.put("flowerList", flowerList);
-		return map;
+	    Optional<Product> opt = pr.findById(productId);
+	    Product p = opt.get(); // ❌ 여기서 500 가능성 높음
+	    ProductDTO dto = new ProductDTO();
+	    dto.setProductId(p.getProductId());
+	    dto.setProductName(p.getProductName());
+	    dto.setImageName(p.getImageName());
+	    dto.setBasicPrice(p.getBasicPrice());
+	    dto.setDescription(p.getDescription());
+	    Map<String, Object> map = new HashMap<>();
+	    
+	    List<Flower> flowerList = fr.findAll(); // ⚠ Flower import 확인 필요
+	    map.put("dto", dto);
+	    map.put("flowerList", flowerList);
+	    return map;
 	}
+
 	
 	@GetMapping("/{productId}/review")
 	public Map<String, Object> reviewList(@PathVariable(name = "productId") Integer productId) {
-		Map<String, Object> map = new HashMap<>();
-		List<Review> reviewList = rr.findByProductId(productId);
-		//System.out.println("리뷰 수 : " + rr.count());
-		map.put("rcount", rr.count());
-		map.put("rlist", reviewList);
-		return map;
+	    Map<String, Object> map = new HashMap<>();
+	    List<Review> reviewList = rr.findByProductId(productId);
+
+	    map.put("rcount", reviewList.size()); // ⭐ 해당 상품 리뷰 수
+	    map.put("rlist", reviewList);
+
+	    return map;
 	}
+	
+	@GetMapping("/{productId}/info")
+	   public Map<String, Object> info(@PathVariable(name = "productId") Integer productId) {
+	      Optional<Product> opt = pr.findById(productId);
+	      
+	      Product p = opt.get();
+	      ProductDTO dto = modelMapper.map(p, ProductDTO.class);
+	      
+	      Map<String, Object> map = new HashMap<>();
+	      
+	      map.put("dto", dto);
+	      map.put("mfl", fr.findByCategoryAndShowTrue("메인"));
+	      map.put("sfl", fr.findByCategoryAndShowTrue("서브"));
+	      map.put("ffl", fr.findByCategoryAndShowTrue("잎사귀"));
+	      
+	      map.put("wdl", dr.findByCategoryAndShowTrue("포장지"));
+	      map.put("adl", dr.findByCategoryAndShowTrue("기타"));
+//	      System.out.println(map);
+	      return map;
+	   }
+	
+
 	
 	@GetMapping("/{productId}/qa")
 	public List<Question> qaList(@PathVariable(name = "productId") Integer productId) {
