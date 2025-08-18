@@ -22,12 +22,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.flette.dto.ProductDTO;
 import com.example.flette.dto.QnADTO;
 import com.example.flette.entity.Answer;
-import com.example.flette.entity.Decoration;
-import com.example.flette.entity.Flower;
+import com.example.flette.entity.Bouquet;
 import com.example.flette.entity.Product;
 import com.example.flette.entity.Question;
 import com.example.flette.entity.Review;
 import com.example.flette.repository.AnswerRepository;
+import com.example.flette.repository.BouquetRepository;
 import com.example.flette.repository.DecorationRepository;
 import com.example.flette.repository.FlowerRepository;
 import com.example.flette.repository.MemberRepository;
@@ -46,6 +46,9 @@ public class ShopApi {
 	
 	@Autowired
 	DecorationRepository dr;
+	
+	@Autowired
+	BouquetRepository br;
 	
 	@Autowired
 	ReviewRepository rr;
@@ -95,7 +98,22 @@ public class ShopApi {
 		
 		map.put("wdl", dr.findByCategoryAndShowTrue("포장지"));
 		map.put("adl", dr.findByCategoryAndShowTrue("기타"));
-//		System.out.println(map);
+		return map;
+	}
+	
+	@PostMapping("/{productId}/bouquet/insert")
+	public Map<String, Object> bouquetInsert(@PathVariable(name = "productId") Integer productId, 
+			@RequestBody Bouquet bouquet) {
+		Map<String, Object> map = new HashMap<>();
+		try {
+			br.save(bouquet);
+			map.put("success", true);
+			map.put("message", "저장 성공");
+		} catch(Exception e) {
+			e.printStackTrace();
+			map.put("success", false);
+			map.put("message", "에러 발생: " + e.getMessage());
+		}
 		return map;
 	}
 	

@@ -16,20 +16,22 @@ public class Cart {
     private Integer cartId;
 
     @ManyToOne(fetch = FetchType.LAZY) // 지연 로딩 설정
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "userid")
     private Member member;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "flower_id")
-    private Flower flower;
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "flower_id")
+//    private Flower flower;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "bouquet_code")
-    private Bouquet bouquet;
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "bouquet_code")
+//    private Bouquet bouquet;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "decoration_id")
-    private Decoration decoration;
+//    @ManyToOne(fetch = FetchType.LAZY)
+//    @JoinColumn(name = "decoration_id")
+//    private Decoration decoration;
+    
+    private Integer bouquetCode;
 
     @Column(name = "price")
     private Integer price; // 단가 (수량 1개당 가격)
@@ -44,18 +46,6 @@ public class Cart {
     @PostPersist
     @PostUpdate
     public void calculatePrices() {
-        int itemBasePrice = 0;
-        if (this.flower != null) {
-            itemBasePrice += this.flower.getAddPrice();
-        }
-        if (this.bouquet != null) {
-            itemBasePrice += this.bouquet.getTotalMoney();
-        }
-        if (this.decoration != null) {
-            itemBasePrice += this.decoration.getUtilPrice();
-        }
-
-        this.price = itemBasePrice;
-        this.totalPrice = itemBasePrice * this.quantity;
+        this.totalPrice = this.price * this.quantity;
     }
 }
