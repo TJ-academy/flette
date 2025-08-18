@@ -38,101 +38,101 @@ import com.example.flette.repository.ReviewRepository;
 @RestController
 @RequestMapping("/api/shop")
 public class ShopApi {
-   @Autowired
-   ProductRepository pr;
-   
-   @Autowired
-   FlowerRepository fr;
-   
-   @Autowired
-   DecorationRepository dr;
-   
-   @Autowired
-   BouquetRepository br;
-   
-   @Autowired
-   ReviewRepository rr;
-   
-   @Autowired
-   QuestionRepository qr;
-   
-   @Autowired
-   AnswerRepository ar;
-   
-   @Autowired
-   MemberRepository mr;
-   
-   @Autowired
-   ModelMapper modelMapper;
-   
-   @GetMapping
-   public List<Product> list() {
-      return pr.findAll();
-   }
-   
-   @GetMapping("/{productId}/detail")
-   public Map<String, Object> detail(@PathVariable(name = "productId") Integer productId) {
-      Optional<Product> opt = pr.findById(productId);
-      Product p = opt.get();
-      ProductDTO dto = modelMapper.map(p, ProductDTO.class);
-      
-      Map<String, Object> map = new HashMap<>();
-      
-      map.put("dto", dto);
-      return map;
-   }
-   
-   @GetMapping("/{productId}/info")
-   public Map<String, Object> info(@PathVariable(name = "productId") Integer productId) {
-      Optional<Product> opt = pr.findById(productId);
-      
-      Product p = opt.get();
-      ProductDTO dto = modelMapper.map(p, ProductDTO.class);
-      
-      Map<String, Object> map = new HashMap<>();
-      
-      map.put("dto", dto);
-      map.put("mfl", fr.findByCategoryAndShowTrue("메인"));
-      map.put("sfl", fr.findByCategoryAndShowTrue("서브"));
-      map.put("ffl", fr.findByCategoryAndShowTrue("잎사귀"));
-      
-      map.put("wdl", dr.findByCategoryAndShowTrue("포장지"));
-      map.put("adl", dr.findByCategoryAndShowTrue("기타"));
-      return map;
-   }
-   
-   @PostMapping("/{productId}/bouquet/insert")
-   public Map<String, Object> bouquetInsert(@PathVariable(name = "productId") Integer productId, 
-         @RequestBody Bouquet bouquet) {
-      Map<String, Object> map = new HashMap<>();
-      try {
-         br.save(bouquet);
-         map.put("success", true);
-         map.put("message", "저장 성공");
-      } catch(Exception e) {
-         e.printStackTrace();
-         map.put("success", false);
-         map.put("message", "에러 발생: " + e.getMessage());
-      }
-      return map;
-   }
-   
-   @GetMapping("/{productId}/review")
-   public Map<String, Object> reviewList(@PathVariable(name = "productId") Integer productId) {
-      Map<String, Object> map = new HashMap<>();
-      List<Review> reviewList = rr.findByProductId(productId);
-      //System.out.println("리뷰 수 : " + rr.count());
-      map.put("rcount", reviewList.size());
-      map.put("rlist", reviewList);
-      return map;
-   }
-   
-   @GetMapping("/{productId}/qa")
-   public Map<String, Object> qaList(@PathVariable(name = "productId") Integer productId, 
-         @RequestParam(name = "page",defaultValue = "0") int page, 
-         @RequestParam(name = "size", defaultValue = "10") int size) {
-      Pageable pageable = PageRequest.of(page, size, Sort.by("questionId").descending());
-       Page<Question> questionPage = qr.findByProductId(productId, pageable);
+	@Autowired
+	ProductRepository pr;
+	
+	@Autowired
+	FlowerRepository fr;
+	
+	@Autowired
+	DecorationRepository dr;
+	
+	@Autowired
+	BouquetRepository br;
+	
+	@Autowired
+	ReviewRepository rr;
+	
+	@Autowired
+	QuestionRepository qr;
+	
+	@Autowired
+	AnswerRepository ar;
+	
+	@Autowired
+	MemberRepository mr;
+	
+	@Autowired
+	ModelMapper modelMapper;
+	
+	@GetMapping
+	public List<Product> list() {
+		return pr.findAll();
+	}
+	
+	@GetMapping("/{productId}/detail")
+	public Map<String, Object> detail(@PathVariable(name = "productId") Integer productId) {
+		Optional<Product> opt = pr.findById(productId);
+		Product p = opt.get();
+		ProductDTO dto = modelMapper.map(p, ProductDTO.class);
+		
+		Map<String, Object> map = new HashMap<>();
+		
+		map.put("dto", dto);
+		return map;
+	}
+	
+	@GetMapping("/{productId}/info")
+	public Map<String, Object> info(@PathVariable(name = "productId") Integer productId) {
+		Optional<Product> opt = pr.findById(productId);
+		
+		Product p = opt.get();
+		ProductDTO dto = modelMapper.map(p, ProductDTO.class);
+		
+		Map<String, Object> map = new HashMap<>();
+		
+		map.put("dto", dto);
+		map.put("mfl", fr.findByCategoryAndShowTrue("메인"));
+		map.put("sfl", fr.findByCategoryAndShowTrue("서브"));
+		map.put("ffl", fr.findByCategoryAndShowTrue("잎사귀"));
+		
+		map.put("wdl", dr.findByCategoryAndShowTrue("포장지"));
+		map.put("adl", dr.findByCategoryAndShowTrue("기타"));
+		return map;
+	}
+	
+	@PostMapping("/{productId}/bouquet/insert")
+	public Map<String, Object> bouquetInsert(@PathVariable(name = "productId") Integer productId, 
+			@RequestBody Bouquet bouquet) {
+		Map<String, Object> map = new HashMap<>();
+		try {
+			br.save(bouquet);
+			map.put("success", true);
+			map.put("message", "저장 성공");
+		} catch(Exception e) {
+			e.printStackTrace();
+			map.put("success", false);
+			map.put("message", "에러 발생: " + e.getMessage());
+		}
+		return map;
+	}
+	
+	@GetMapping("/{productId}/review")
+	public Map<String, Object> reviewList(@PathVariable(name = "productId") Integer productId) {
+		Map<String, Object> map = new HashMap<>();
+		List<Review> reviewList = rr.findByProductId(productId);
+		//System.out.println("리뷰 수 : " + rr.count());
+		map.put("rcount", reviewList.size());
+		map.put("rlist", reviewList);
+		return map;
+	}
+	
+	@GetMapping("/{productId}/qa")
+	public Map<String, Object> qaList(@PathVariable(name = "productId") Integer productId, 
+			@RequestParam(name = "page",defaultValue = "0") int page, 
+			@RequestParam(name = "size", defaultValue = "10") int size) {
+		Pageable pageable = PageRequest.of(page, size, Sort.by("questionId").descending());
+	    Page<Question> questionPage = qr.findByProductId(productId, pageable);
 
        List<QnADTO> dtoList = questionPage.getContent().stream().map(q -> {
            QnADTO dto = new QnADTO();

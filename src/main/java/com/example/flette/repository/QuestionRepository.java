@@ -1,14 +1,17 @@
 package com.example.flette.repository;
 
-import com.example.flette.entity.Question;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
+import com.example.flette.entity.Question;
 
 public interface QuestionRepository extends JpaRepository<Question, Integer> {
 
@@ -26,13 +29,24 @@ public interface QuestionRepository extends JpaRepository<Question, Integer> {
     // 사용자별 문의 (페이징)
     Page<Question> findByUseridOrderByQuestionDateDesc(String userid, Pageable pageable);
 
+    // 질문 게시
+    @Modifying
+    @Transactional
+    @Query(value = "insert into question "
+            + "(product_id, userid, title, content, status, passwd, question_date) values "
+            + "(:productId, :userid, :title, :content, false, SHA2(:passwd, 256), now())", nativeQuery = true)
+    void addQues(@Param("productId") Integer productId, @Param("userid") String userid, 
+    		@Param("title") String title, @Param("content") String content, 
+    		@Param("passwd") String passwd);
+    
     // 🔑 비밀번호 확인 (SHA256 비교)
-    @Query(value = "SELECT question_id FROM question WHERE question_id = :questionId AND passwd = SHA2(:passwd, 256)", nativeQuery = true)
-    Optional<Integer> checkPassword(@Param("questionId") Integer questionId, @Param("passwd") String passwd);
+    @Query(value = "SELECT question_id FROM question "
+    		+ "WHERE question_id = :questionId "
+    		+ "AND passwd = SHA2(:passwd, 256)", 
+    		nativeQuery = true)
+    Optional<Integer> checkPassword(@Param("questionId") Integer questionId, 
+    		@Param("passwd") String passwd);
 
     // 해당 userid로 작성된 문의 개수
     long countByUserid(String userid);
-    
-    
 }
-
