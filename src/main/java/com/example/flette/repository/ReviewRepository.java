@@ -11,4 +11,7 @@ public interface ReviewRepository extends JpaRepository<Review, Integer> {
 	
 	// 해당 userid로 작성된 리뷰 개수를 조회
     long countByWriter(String writer);
+
+    // 해당 bouquetCode로 작성된 리뷰가 있는지 확인하는 메서드 추가
+    boolean existsByBouquetCode(Integer bouquetCode);
 }

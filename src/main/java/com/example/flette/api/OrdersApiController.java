@@ -21,6 +21,7 @@ import com.example.flette.entity.Product;
 import com.example.flette.repository.BouquetRepository;
 import com.example.flette.repository.OrderDetailRepository;
 import com.example.flette.repository.ProductRepository;
+import com.example.flette.repository.ReviewRepository;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -41,25 +42,23 @@ public class OrdersApiController {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private ReviewRepository reviewRepository;
+
     //------결제 관련 로직------------------------------------------------
-    // 결제 요청 DTO (필요에 따라 필드 추가)
     public static class PaymentRequestDto {
         public String merchant_uid;
         public int amount;
         public String name;
         public String buyerName;
         public String buyerTel;
-        // 기타 필요한 필드 추가
     }
 
-    // 결제 위변조 검증 DTO
     public static class PaymentVerificationDto {
         public String imp_uid;
         public String merchant_uid;
     }
 
-    // 아임포트 결제 사전 등록 API
-    // 프론트엔드에서 결제창을 띄우기 전에 호출
     @PostMapping("/prepare")
     public ResponseEntity<?> preparePayment(@RequestBody PaymentRequestDto requestDto) {
         try {
@@ -81,8 +80,6 @@ public class OrdersApiController {
         }
     }
 
-    // 결제 위변조 검증 API
-    // 프론트엔드에서 결제 완료 후 호출
     @PostMapping("/verify")
     public ResponseEntity<?> verifyPayment(@RequestBody PaymentVerificationDto verifyDto) {
         try {
@@ -133,9 +130,9 @@ public class OrdersApiController {
     //--------------------------------------------------------------------
 
     /**
-     * 특정 사용자의 주문 내역을 상세 정보와 함께 조회하는 API.
+     * 특정 사용자의 주문 내역을 상세 정보와 함께 조회하는 API. (주문 목록 페이지용)
      * @param userId 조회할 사용자의 ID
-     * @return 주문 내역 리스트 (OrderHistoryDto)
+     * @return 주문 내역 리스트 (OrderHistoryDTO)
      */
     @GetMapping("/history/{userid}")
     public ResponseEntity<List<OrderHistoryDTO>> getUserOrdersWithDetails(@PathVariable("userid") String userid) {
@@ -151,36 +148,88 @@ public class OrdersApiController {
             historyDto.setOrderDate(order.getOrderDate());
             historyDto.setStatus(order.getStatus());
 
-            // 3. 해당 order_id를 가진 모든 order_detail 정보를 조회
             List<OrderDetail> details = orderDetailRepository.findByOrderId(order.getOrderId());
-
-            // 4. 각 order_detail에 대해 상품 정보(Product)를 조회
-            List<OrderDetailDTO> detailDtos = new ArrayList<>();
+            
+            List<OrderHistoryDTO.OrderHistoryDetailDTO> detailDtos = new ArrayList<>();
+            
             for (OrderDetail detail : details) {
-                OrderDetailDTO detailDto = new OrderDetailDTO();
+                OrderHistoryDTO.OrderHistoryDetailDTO detailDto = new OrderHistoryDTO.OrderHistoryDetailDTO();
                 detailDto.setDetailId(detail.getDetailId());
                 detailDto.setMoney(detail.getMoney());
 
-                // 5. bouquet_code로 bouquet 테이블에서 product_id를 조회
                 Optional<Bouquet> bouquetOpt = bouquetRepository.findById(detail.getBouquetCode());
                 if (bouquetOpt.isPresent()) {
                     Bouquet bouquet = bouquetOpt.get();
                     
-                    // 6. product_id로 product 테이블에서 image_name과 product_name을 조회
                     Optional<Product> productOpt = productRepository.findById(bouquet.getProductId());
                     if (productOpt.isPresent()) {
                         Product product = productOpt.get();
                         detailDto.setProductName(product.getProductName());
                         detailDto.setImageName(product.getImageName());
+                        detailDto.setBouquetCode(bouquet.getBouquetCode());
                     }
                 }
+                detailDto.setHasReview(reviewRepository.existsByBouquetCode(detail.getBouquetCode()));
+                
                 detailDtos.add(detailDto);
             }
             historyDto.setDetails(detailDtos);
             historyList.add(historyDto);
         }
-
-        // 7. 완성된 주문 내역 리스트를 반환
         return new ResponseEntity<>(historyList, HttpStatus.OK);
+    }
+    
+    /**
+     * 특정 주문의 상세 정보를 조회하는 API. (주문 상세 페이지용)
+     *
+     * @param orderId 조회할 주문의 ID
+     * @return 주문 상세 정보 (OrderDetailDTO)
+     */
+    @GetMapping("/{orderId}/detail")
+    public ResponseEntity<?> getOrderDetail(@PathVariable("orderId") int orderId) {
+        Optional<Orders> orderOpt = ordersRepository.findById(orderId);
+        if (orderOpt.isEmpty()) {
+            return new ResponseEntity<>("주문 정보가 없습니다.", HttpStatus.NOT_FOUND);
+        }
+        Orders order = orderOpt.get();
+
+        List<OrderDetail> details = orderDetailRepository.findByOrderId(order.getOrderId());
+        if (details.isEmpty()) {
+            return new ResponseEntity<>("주문 상세 품목이 없습니다.", HttpStatus.NOT_FOUND);
+        }
+
+        OrderDetailDTO orderDetailDto = new OrderDetailDTO();
+        orderDetailDto.setOrderId(order.getOrderId());
+        orderDetailDto.setImpUid(order.getImpUid());
+        orderDetailDto.setOrderDate(order.getOrderDate());
+        orderDetailDto.setStatus(order.getStatus());
+        orderDetailDto.setTotalMoney(order.getTotalMoney());
+        orderDetailDto.setUserid(order.getUserid());
+        orderDetailDto.setOrderAddress(order.getOrderAddress());
+
+        List<OrderDetailDTO.ProductDetail> productDetails = new ArrayList<>();
+        for (OrderDetail detail : details) {
+            OrderDetailDTO.ProductDetail productDetail = new OrderDetailDTO.ProductDetail();
+            productDetail.setDetailId(detail.getDetailId());
+            productDetail.setMoney(detail.getMoney());
+
+            Optional<Bouquet> bouquetOpt = bouquetRepository.findById(detail.getBouquetCode());
+            if (bouquetOpt.isPresent()) {
+                Bouquet bouquet = bouquetOpt.get();
+                Optional<Product> productOpt = productRepository.findById(bouquet.getProductId());
+                if (productOpt.isPresent()) {
+                    Product product = productOpt.get();
+                    productDetail.setProductName(product.getProductName());
+                    productDetail.setImageName(product.getImageName());
+                    productDetail.setBouquetCode(bouquet.getBouquetCode());
+                }
+            }
+            productDetail.setHasReview(reviewRepository.existsByBouquetCode(detail.getBouquetCode()));
+
+            productDetails.add(productDetail);
+        }
+        orderDetailDto.setDetails(productDetails);
+
+        return new ResponseEntity<>(orderDetailDto, HttpStatus.OK);
     }
 }
