@@ -11,6 +11,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.example.flette.dto.OrderCancelInfoDTO;
+import com.example.flette.entity.Flower;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +21,7 @@ import com.example.flette.entity.Bouquet;
 import com.example.flette.entity.OrderDetail;
 import com.example.flette.entity.Product;
 import com.example.flette.repository.BouquetRepository;
+import com.example.flette.repository.FlowerRepository;
 import com.example.flette.repository.OrderDetailRepository;
 import com.example.flette.repository.ProductRepository;
 import com.example.flette.repository.ReviewRepository;
@@ -44,6 +47,10 @@ public class OrdersApiController {
 
     @Autowired
     private ReviewRepository reviewRepository;
+    
+    @Autowired
+    private FlowerRepository flowerRepository; 
+
 
     //------결제 관련 로직------------------------------------------------
     public static class PaymentRequestDto {
@@ -231,5 +238,91 @@ public class OrdersApiController {
         orderDetailDto.setDetails(productDetails);
 
         return new ResponseEntity<>(orderDetailDto, HttpStatus.OK);
+    }
+    
+    //주문취소 api
+    @PatchMapping("/cancel/{orderId}")
+    public ResponseEntity<String> cancelOrder(@PathVariable("orderId") Integer orderId) {
+        Optional<Orders> orderOpt = ordersRepository.findById(orderId);
+        if (orderOpt.isEmpty()) {
+            return new ResponseEntity<>("주문 정보가 없습니다.", HttpStatus.NOT_FOUND);
+        }
+
+        Orders order = orderOpt.get();
+        // 주문 상태가 "입금확인중"일 때만 취소 가능
+        if ("입금확인중".equals(order.getStatus())) {
+            order.setStatus("취소완료");
+            ordersRepository.save(order);
+            return new ResponseEntity<>("주문이 성공적으로 취소되었습니다.", HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>("현재 상태에서는 주문을 취소할 수 없습니다.", HttpStatus.BAD_REQUEST);
+        }
+    }
+    
+    //주문취소완료페이지
+    @GetMapping("/cancel/{orderId}/info")
+    public ResponseEntity<?> getCancelInfo(@PathVariable("orderId") int orderId) {
+        Optional<Orders> orderOpt = ordersRepository.findById(orderId);
+        if (orderOpt.isEmpty()) {
+            return new ResponseEntity<>("주문 정보를 찾을 수 없습니다.", HttpStatus.NOT_FOUND);
+        }
+        Orders order = orderOpt.get();
+
+        // OrderDetail에서 BouquetCode 가져오기
+        List<OrderDetail> details = orderDetailRepository.findByOrderId(orderId);
+        if (details.isEmpty()) {
+            return new ResponseEntity<>("주문 상세 품목이 없습니다.", HttpStatus.NOT_FOUND);
+        }
+        
+        // OrderCancelInfoDTO에 담을 데이터 준비
+        OrderCancelInfoDTO cancelInfoDTO = new OrderCancelInfoDTO();
+        cancelInfoDTO.setTotalMoney(order.getTotalMoney());
+
+        // 각 주문 상세 항목에 대해 필요한 정보 추출
+        for (OrderDetail detail : details) {
+            Optional<Bouquet> bouquetOpt = bouquetRepository.findById(detail.getBouquetCode());
+            if (bouquetOpt.isPresent()) {
+                Bouquet bouquet = bouquetOpt.get();
+
+                // Product 정보 (상품명, 이미지)
+                Optional<Product> productOpt = productRepository.findById(bouquet.getProductId());
+                if (productOpt.isPresent()) {
+                    Product product = productOpt.get();
+                    cancelInfoDTO.setProductName(product.getProductName());
+                    cancelInfoDTO.setImageName(product.getImageName());
+                }
+
+                // Flower 정보 (MAIN, SUB, FOLIAGE)
+                cancelInfoDTO.setMainFlowers(getFlowerOptions(bouquet.getMainA(), bouquet.getMainB(), bouquet.getMainC()));
+                cancelInfoDTO.setSubFlowers(getFlowerOptions(bouquet.getSubA(), bouquet.getSubB(), bouquet.getSubC()));
+                cancelInfoDTO.setFoliageFlowers(getFlowerOptions(bouquet.getLeafA(), bouquet.getLeafB(), bouquet.getLeafC()));
+
+            }
+        }
+        return new ResponseEntity<>(cancelInfoDTO, HttpStatus.OK);
+    }
+    
+    /**
+     * 여러 플라워 ID에 해당하는 Flower 이름을 조회하는 헬퍼 메서드
+     */
+    private List<OrderCancelInfoDTO.FlowerOption> getFlowerOptions(Integer id1, Integer id2, Integer id3) {
+        List<OrderCancelInfoDTO.FlowerOption> options = new ArrayList<>();
+        addFlowerName(options, id1);
+        addFlowerName(options, id2);
+        addFlowerName(options, id3);
+        return options;
+    }
+
+    /**
+     * 단일 플라워 ID에 해당하는 Flower 이름을 조회하여 리스트에 추가하는 헬퍼 메서드
+     */
+    private void addFlowerName(List<OrderCancelInfoDTO.FlowerOption> options, Integer flowerId) {
+        if (flowerId != null && flowerId != 0) {
+            flowerRepository.findById(flowerId).ifPresent(flower -> {
+                OrderCancelInfoDTO.FlowerOption option = new OrderCancelInfoDTO.FlowerOption();
+                option.setName(flower.getFlowerName());
+                options.add(option);
+            });
+        }
     }
 }
