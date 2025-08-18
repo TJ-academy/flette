@@ -1,5 +1,6 @@
 package com.example.flette.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
@@ -20,4 +21,11 @@ public class Decoration {
 	private String decorationName;
 	private Integer utilPrice; //단가
 	private String description;
+	private String category;
+	
+	@Column(name = "image_name")
+	private String imageName;
+	
+	@Column(name ="`show`")
+	private boolean show;
 }
