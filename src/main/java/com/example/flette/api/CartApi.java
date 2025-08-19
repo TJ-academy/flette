@@ -129,6 +129,26 @@ public class CartApi {
     public void removeFromCart(@PathVariable(name = "cartId") Integer cartId) {
         cartRepository.deleteById(cartId);
     }
+    
+    // 장바구니 비우기
+    @DeleteMapping("/remove/all/{userid}")
+    public Map<String, Object> removeAll(@PathVariable(name = "userid") String userid) {
+    	Map<String, Object> result = new HashMap<>();
+    	
+    	List<Cart> cartItems = cartRepository.findByMember_UseridOrderByCartIdAsc(userid);
+    	
+    	try {
+    		cartRepository.deleteAll(cartItems);
+
+            result.put("success", true);
+            result.put("message", "장바구니가 비워졌습니다.");
+    	} catch (Exception e) {
+    		result.put("success", false);
+            result.put("message", "장바구니 비우기 실패: " + e.getMessage());
+    	}
+    	
+    	return result;
+    }
 
     // 장바구니 항목 업데이트 (수량)
     @PatchMapping("/update/{cartId}")
@@ -140,6 +160,8 @@ public class CartApi {
         cart.setQuantity(body.get("quantity"));
         cart.setTotalPrice(cart.getPrice() * body.get("quantity"));
 
+        cartRepository.save(cart);
+        
         CartDTO dto = new CartDTO();
         dto.setCartId(cart.getCartId());
         dto.setBouquetCode(cart.getBouquet().getBouquetCode());
