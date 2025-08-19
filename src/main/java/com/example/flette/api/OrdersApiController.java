@@ -19,9 +19,11 @@ import java.util.List;
 import java.util.Optional;
 import java.util.ArrayList;
 import com.example.flette.entity.Bouquet;
+import com.example.flette.entity.Decoration; // 추가
 import com.example.flette.entity.OrderDetail;
 import com.example.flette.entity.Product;
 import com.example.flette.repository.BouquetRepository;
+import com.example.flette.repository.DecorationRepository; // 추가
 import com.example.flette.repository.FlowerRepository;
 import com.example.flette.repository.OrderDetailRepository;
 import com.example.flette.repository.ProductRepository;
@@ -36,7 +38,6 @@ public class OrdersApiController {
 
     @Autowired
     private IamportService iamportService;
-    
     @Autowired
     private OrderDetailRepository orderDetailRepository;
 
@@ -48,9 +49,10 @@ public class OrdersApiController {
 
     @Autowired
     private ReviewRepository reviewRepository;
-    
     @Autowired
-    private FlowerRepository flowerRepository; 
+    private FlowerRepository flowerRepository;
+    @Autowired
+    private DecorationRepository decorationRepository; // 추가
 
 
     //------결제 관련 로직------------------------------------------------
@@ -97,7 +99,6 @@ public class OrdersApiController {
             }
 
             IamportResponse<PaymentInfo> paymentInfoResponse = iamportService.getPaymentInfo(accessToken, verifyDto.imp_uid);
-            
             if (paymentInfoResponse == null || paymentInfoResponse.getCode() != 0 || paymentInfoResponse.getResponse() == null) {
                 return new ResponseEntity<>("아임포트 결제 정보 조회 실패", HttpStatus.INTERNAL_SERVER_ERROR);
             }
@@ -111,7 +112,6 @@ public class OrdersApiController {
             if (orderOptional.isEmpty()) {
                 return new ResponseEntity<>("DB에 존재하지 않는 주문 번호입니다.", HttpStatus.BAD_REQUEST);
             }
-            
             Orders savedOrder = orderOptional.get();
             int savedAmount = savedOrder.getTotalMoney();
 
@@ -129,7 +129,7 @@ public class OrdersApiController {
             return new ResponseEntity<>("결제 검증 실패: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-    
+
     @GetMapping
     public ResponseEntity<List<Orders>> getAllOrders() {
         List<Orders> ordersList = ordersRepository.findAll();
@@ -149,7 +149,6 @@ public class OrdersApiController {
 
         // 2. 각 주문에 대해 주문 상세 정보(OrderDetail)를 포함한 DTO를 생성
         List<OrderHistoryDTO> historyList = new ArrayList<>();
-        
         for (Orders order : ordersList) {
             OrderHistoryDTO historyDto = new OrderHistoryDTO();
             historyDto.setOrderId(order.getOrderId());
@@ -157,9 +156,7 @@ public class OrdersApiController {
             historyDto.setStatus(order.getStatus());
 
             List<OrderDetail> details = orderDetailRepository.findByOrderId(order.getOrderId());
-            
             List<OrderHistoryDTO.OrderHistoryDetailDTO> detailDtos = new ArrayList<>();
-            
             for (OrderDetail detail : details) {
                 OrderHistoryDTO.OrderHistoryDetailDTO detailDto = new OrderHistoryDTO.OrderHistoryDetailDTO();
                 detailDto.setDetailId(detail.getDetailId());
@@ -168,7 +165,6 @@ public class OrdersApiController {
                 Optional<Bouquet> bouquetOpt = bouquetRepository.findById(detail.getBouquetCode());
                 if (bouquetOpt.isPresent()) {
                     Bouquet bouquet = bouquetOpt.get();
-                    
                     Optional<Product> productOpt = productRepository.findById(bouquet.getProductId());
                     if (productOpt.isPresent()) {
                         Product product = productOpt.get();
@@ -178,7 +174,6 @@ public class OrdersApiController {
                     }
                 }
                 detailDto.setHasReview(reviewRepository.existsByBouquetCode(detail.getBouquetCode()));
-                
                 detailDtos.add(detailDto);
             }
             historyDto.setDetails(detailDtos);
@@ -186,7 +181,7 @@ public class OrdersApiController {
         }
         return new ResponseEntity<>(historyList, HttpStatus.OK);
     }
-    
+
     /**
      * 특정 주문의 상세 정보를 조회하는 API. (주문 상세 페이지용)
      *
@@ -231,6 +226,26 @@ public class OrdersApiController {
                     productDetail.setImageName(product.getImageName());
                     productDetail.setBouquetCode(bouquet.getBouquetCode());
                 }
+
+                // 부케 구성 요소 상세 정보 추가
+                List<OrderDetailDTO.BouquetComponent> components = new ArrayList<>();
+
+                // Main Flowers
+                addFlowerComponents(components, "MAIN", bouquet.getMainA(), bouquet.getMainB(), bouquet.getMainC());
+
+                // Sub Flowers
+                addFlowerComponents(components, "SUB", bouquet.getSubA(), bouquet.getSubB(), bouquet.getSubC());
+
+                // Foliage Flowers
+                addFlowerComponents(components, "FOLIAGE", bouquet.getLeafA(), bouquet.getLeafB(), bouquet.getLeafC());
+
+                // Additional Items
+                addDecorationComponents(components, "ADDITIONAL", bouquet.getAddA(), bouquet.getAddB(), bouquet.getAddC());
+
+                // Wrapping
+                addDecorationComponents(components, "WRAPPING", bouquet.getWrapping());
+                
+                productDetail.setComponents(components);
             }
             productDetail.setHasReview(reviewRepository.existsByBouquetCode(detail.getBouquetCode()));
 
@@ -240,7 +255,38 @@ public class OrdersApiController {
 
         return new ResponseEntity<>(orderDetailDto, HttpStatus.OK);
     }
-    
+
+    // Helper method to add flower components
+    private void addFlowerComponents(List<OrderDetailDTO.BouquetComponent> components, String type, Integer... flowerIds) {
+        for (Integer id : flowerIds) {
+            if (id != null && id != 0) {
+                flowerRepository.findById(id).ifPresent(flower -> {
+                    OrderDetailDTO.BouquetComponent comp = new OrderDetailDTO.BouquetComponent();
+                    comp.setType(type);
+                    comp.setName(flower.getFlowerName());
+                    comp.setAddPrice(flower.getAddPrice());
+                    components.add(comp);
+                });
+            }
+        }
+    }
+
+    // Helper method to add decoration components
+    private void addDecorationComponents(List<OrderDetailDTO.BouquetComponent> components, String type, Integer... decorationIds) {
+        for (Integer id : decorationIds) {
+            if (id != null && id != 0) {
+                decorationRepository.findById(id).ifPresent(decoration -> {
+                    OrderDetailDTO.BouquetComponent comp = new OrderDetailDTO.BouquetComponent();
+                    comp.setType(type);
+                    comp.setName(decoration.getDecorationName());
+                    comp.setAddPrice(decoration.getUtilPrice());
+                    components.add(comp);
+                });
+            }
+        }
+    }
+
+
     //주문취소 api
     @PatchMapping("/cancel/{orderId}")
     public ResponseEntity<String> cancelOrder(@PathVariable("orderId") Integer orderId) {
@@ -259,7 +305,6 @@ public class OrdersApiController {
             return new ResponseEntity<>("현재 상태에서는 주문을 취소할 수 없습니다.", HttpStatus.BAD_REQUEST);
         }
     }
-    
     //주문취소완료페이지
     @GetMapping("/cancel/{orderId}/info")
     public ResponseEntity<?> getCancelInfo(@PathVariable("orderId") int orderId) {
@@ -274,7 +319,6 @@ public class OrdersApiController {
         if (details.isEmpty()) {
             return new ResponseEntity<>("주문 상세 품목이 없습니다.", HttpStatus.NOT_FOUND);
         }
-        
         // OrderCancelInfoDTO에 담을 데이터 준비
         OrderCancelInfoDTO cancelInfoDTO = new OrderCancelInfoDTO();
         cancelInfoDTO.setTotalMoney(order.getTotalMoney());
@@ -302,7 +346,6 @@ public class OrdersApiController {
         }
         return new ResponseEntity<>(cancelInfoDTO, HttpStatus.OK);
     }
-    
     /**
      * 여러 플라워 ID에 해당하는 Flower 이름을 조회하는 헬퍼 메서드
      */
@@ -326,7 +369,6 @@ public class OrdersApiController {
             });
         }
     }
-    
     /* 환불 메서드(환불페이지로 데이터 전송) 취소메서드 재사용*/
     @GetMapping("/refund/{orderId}/info")
     public ResponseEntity<?> getRefundInfo(@PathVariable("orderId") int orderId) {
@@ -340,7 +382,6 @@ public class OrdersApiController {
         if (details.isEmpty()) {
             return new ResponseEntity<>("주문 상세 품목이 없습니다.", HttpStatus.NOT_FOUND);
         }
-        
         OrderCancelInfoDTO cancelInfoDTO = new OrderCancelInfoDTO();
         cancelInfoDTO.setTotalMoney(order.getTotalMoney());
 
@@ -362,11 +403,10 @@ public class OrdersApiController {
         }
         return new ResponseEntity<>(cancelInfoDTO, HttpStatus.OK);
     }
-    
     //환불요청 api
     @PatchMapping("/refund/{orderId}")
-    public ResponseEntity<String> refundOrder(@PathVariable("orderId") Integer orderId, 
-                                              @RequestBody OrderRefundRequestDTO requestDto) {
+    public ResponseEntity<String> refundOrder(@PathVariable("orderId") Integer orderId,
+                                            @RequestBody OrderRefundRequestDTO requestDto) {
         Optional<Orders> orderOpt = ordersRepository.findById(orderId);
         if (orderOpt.isEmpty()) {
             return new ResponseEntity<>("주문 정보가 없습니다.", HttpStatus.NOT_FOUND);
@@ -379,18 +419,15 @@ public class OrdersApiController {
             order.setRefundReason(requestDto.getRefundReason());
             order.setAccount(requestDto.getAccount());
             order.setBank(requestDto.getBank());
-            
             // 상태를 "환불요청"으로 변경
-            order.setStatus("환불요청"); 
-            
+            order.setStatus("환불요청");
             ordersRepository.save(order);
             return new ResponseEntity<>("환불 요청이 성공적으로 접수되었습니다.", HttpStatus.OK);
         } else {
             return new ResponseEntity<>("현재 상태에서는 환불 신청이 불가합니다.", HttpStatus.BAD_REQUEST);
         }
     }
-    
-  	//주문확정 api
+    //주문확정 api
     @PatchMapping("/confirm/{orderId}")
     public ResponseEntity<String> confirmOrder(@PathVariable("orderId") Integer orderId) {
         Optional<Orders> orderOpt = ordersRepository.findById(orderId);
@@ -408,5 +445,4 @@ public class OrdersApiController {
             return new ResponseEntity<>("현재 상태에서는 구매 확정이 불가합니다.", HttpStatus.BAD_REQUEST);
         }
     }
-
 }

@@ -14,16 +14,16 @@ import lombok.ToString;
 @ToString
 @NoArgsConstructor
 public class OrderDetailDTO {
-    // Orders 테이블에서 가져올 정보 (주문 전체 정보)
+    // Information from the Orders table (total order info)
     private Integer orderId;
     private String impUid;
     private LocalDateTime orderDate;
     private String status;
     private Integer totalMoney;
-    private String userid; // 'userId'로 통일하는 것이 좋습니다 (자바 컨벤션)
+    private String userid; // Consistent with Java conventions
     private String orderAddress;
 
-    // OrderDetail 테이블에서 가져올 정보 (주문 상세 품목 리스트)
+    // Information from the OrderDetail table (list of detailed items)
     private List<ProductDetail> details;
 
     @Getter
@@ -37,5 +37,16 @@ public class OrderDetailDTO {
         private String productName;
         private String imageName;
         private boolean hasReview;
+        private List<BouquetComponent> components; // Added list of bouquet components
+    }
+
+    @Getter
+    @Setter
+    @ToString
+    @NoArgsConstructor
+    public static class BouquetComponent {
+        private String type; // e.g., "MAIN", "SUB", "ADDITIONAL"
+        private String name; // e.g., "장미", "안개꽃"
+        private Integer addPrice; // The price of the component
     }
 }
