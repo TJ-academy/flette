@@ -109,6 +109,8 @@ public class ShopApi {
 			br.save(bouquet);
 			map.put("success", true);
 			map.put("message", "저장 성공");
+			map.put("bouquetCode", bouquet.getBouquetCode());
+			map.put("totalMoney", bouquet.getTotalMoney());
 		} catch(Exception e) {
 			e.printStackTrace();
 			map.put("success", false);

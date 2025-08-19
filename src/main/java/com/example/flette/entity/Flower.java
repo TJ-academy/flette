@@ -31,6 +31,7 @@ public class Flower {
 	@Column(name = "image_name")
 	private String imageName;
 	
+	@Column(columnDefinition = "TEXT")
 	private String story;
 	
 	@Column(name ="`show`")
