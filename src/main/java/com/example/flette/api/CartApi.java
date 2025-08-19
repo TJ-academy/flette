@@ -84,14 +84,14 @@ public class CartApi {
         }
         map.put("carts", cdtos);
         //map.put("bouquets", bdtos);
-        System.out.println("cdtos: " + cdtos);
+        //System.out.println("cdtos: " + cdtos);
         return map;
     }
     
     @PostMapping("/insert")
     public Map<String, Object> insertCart(@RequestBody CartDTO req) {
     	Map<String, Object> map = new HashMap<>();
-    	System.out.println("insertCart 요청: userid=" + req.getUserid() + ", bouquetCode=" + req.getBouquetCode());
+    	//System.out.println("insertCart 요청: userid=" + req.getUserid() + ", bouquetCode=" + req.getBouquetCode());
     	try {
     		Optional<Member> member = memberRepository.findById(req.getUserid());
     		Optional<Bouquet> bouquet = bouquetRepository.findById(req.getBouquetCode());
@@ -110,9 +110,6 @@ public class CartApi {
     		cart.setPrice(req.getPrice());
             cart.setQuantity(req.getQuantity());
             cart.setTotalPrice(req.getPrice() * req.getQuantity());
-    		
-    		System.out.println("입력된 cart user: " + cart.getMember().getUserid());
-    		System.out.println("입력된 cart bouquet: " + cart.getBouquet().getBouquetCode());
 
     		cartRepository.save(cart);
     		
@@ -129,20 +126,29 @@ public class CartApi {
 
     // 장바구니에서 항목 삭제
     @DeleteMapping("/remove/{cartId}")
-    public void removeFromCart(@PathVariable Integer cartId) {
+    public void removeFromCart(@PathVariable(name = "cartId") Integer cartId) {
         cartRepository.deleteById(cartId);
     }
 
     // 장바구니 항목 업데이트 (수량)
     @PatchMapping("/update/{cartId}")
-    public Cart updateCartItem(@PathVariable Integer cartId, 
-    		@RequestBody Cart req) {
-        Cart cart = cartRepository.findById(cartId)
-        		.orElseThrow(() -> new IllegalArgumentException("장바구니 항목을 찾을 수 없습니다."));
-        cart.setQuantity(req.getQuantity());
+    public CartDTO updateCartItem(@PathVariable(name = "cartId") Integer cartId, 
+    		@RequestBody Map<String, Integer> body) {
+    	Cart cart = cartRepository.findById(cartId)
+                .orElseThrow(() -> new IllegalArgumentException("Cart not found: " + cartId));
 
-        // 가격 계산 로직은 엔티티의 @PostUpdate가 처리
-        return cartRepository.save(cart);
+        cart.setQuantity(body.get("quantity"));
+        cart.setTotalPrice(cart.getPrice() * body.get("quantity"));
+
+        CartDTO dto = new CartDTO();
+        dto.setCartId(cart.getCartId());
+        dto.setBouquetCode(cart.getBouquet().getBouquetCode());
+        dto.setUserid(cart.getMember().getUserid());
+        dto.setPrice(cart.getPrice());
+        dto.setQuantity(cart.getQuantity());
+        dto.setTotalPrice(cart.getTotalPrice());
+        
+        return dto;
     }
 
     // 주문하기
