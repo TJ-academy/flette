@@ -28,4 +28,7 @@ public interface ReviewRepository extends JpaRepository<Review, Integer> {
     
  // Pagination support for fetching reviews
     Page<Review> findByProductId(Integer productId, Pageable pageable);
+    
+ // reviewImage가 null이 아닌 것들만 조회
+    Page<Review> findByReviewImageIsNotNull(Pageable pageable);
 }
