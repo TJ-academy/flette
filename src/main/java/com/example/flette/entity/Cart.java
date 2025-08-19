@@ -44,10 +44,10 @@ public class Cart {
     @Column(name = "total_price")
     private Integer totalPrice; // 총 금액 (단가 * 수량)
 
-    // 장바구니 항목의 단가와 총 금액을 계산
-    @PostPersist
-    @PostUpdate
-    public void calculatePrices() {
-        this.totalPrice = this.price * this.quantity;
-    }
+//    // 장바구니 항목의 단가와 총 금액을 계산
+//    @PostPersist
+//    @PostUpdate
+//    public void calculatePrices() {
+//        this.totalPrice = this.price * this.quantity;
+//    }
 }
