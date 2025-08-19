@@ -1,10 +1,13 @@
 package com.example.flette.repository;
 
-import com.example.flette.entity.Review;
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.List;
 import java.util.Optional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.example.flette.entity.Review;
 
 public interface ReviewRepository extends JpaRepository<Review, Integer> {
 
@@ -22,4 +25,7 @@ public interface ReviewRepository extends JpaRepository<Review, Integer> {
 
     // 특정 bouquetCode에 해당하는 리뷰 객체 조회
     Optional<Review> findByBouquetCode(Integer bouquetCode);
+    
+ // Pagination support for fetching reviews
+    Page<Review> findByProductId(Integer productId, Pageable pageable);
 }
