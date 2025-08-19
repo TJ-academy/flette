@@ -1,9 +1,19 @@
 package com.example.flette.entity;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PostPersist;
+import jakarta.persistence.PostUpdate;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Data
@@ -17,22 +27,14 @@ public class Cart {
 
     @ManyToOne(fetch = FetchType.LAZY) // 지연 로딩 설정
     @JoinColumn(name = "userid")
+    @ToString.Exclude
     private Member member;
 
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "flower_id")
-//    private Flower flower;
-
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "bouquet_code")
-//    private Bouquet bouquet;
-
-//    @ManyToOne(fetch = FetchType.LAZY)
-//    @JoinColumn(name = "decoration_id")
-//    private Decoration decoration;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "bouquet_code")
+    @ToString.Exclude
+    private Bouquet bouquet;
     
-    private Integer bouquetCode;
-
     @Column(name = "price")
     private Integer price; // 단가 (수량 1개당 가격)
 
