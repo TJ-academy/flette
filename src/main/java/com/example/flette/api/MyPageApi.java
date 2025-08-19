@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.flette.dto.MyPageStatsDTO;
+import com.example.flette.entity.Bouquet;
 import com.example.flette.entity.Member;
 import com.example.flette.entity.OrderDetail;
 import com.example.flette.entity.Orders;
@@ -20,6 +21,8 @@ import com.example.flette.repository.OrdersRepository;
 import com.example.flette.repository.ReviewRepository;
 import com.example.flette.repository.QuestionRepository;
 import com.example.flette.repository.ProductRepository; // ProductRepository 임포트
+import com.example.flette.repository.BouquetRepository; // BouquetRepository 추가
+
 
 @RestController
 @RequestMapping("/api/mypage")
@@ -42,6 +45,9 @@ public class MyPageApi {
 
     @Autowired
     private ProductRepository productRepository; // ProductRepository 주입
+    
+    @Autowired
+    private BouquetRepository bouquetRepository; // BouquetRepository 주입
 
     // 📌 마이페이지 통계
     @GetMapping("/stats")
@@ -135,7 +141,7 @@ public class MyPageApi {
         return ResponseEntity.ok(orders);
     }
     
-	 // 📌 리뷰 조회 (작성할 후기, 작성 완료 후기 분류)
+ // 📌 리뷰 조회 (작성할 후기, 작성 완료 후기 분류)
     @GetMapping("/reviews/{userid}")
     public ResponseEntity<Map<String, Object>> getUserReviews(@PathVariable("userid") String userid) {
     	// 작성할 후기 리스트
@@ -158,14 +164,35 @@ public class MyPageApi {
                 item.put("orderId", order.getOrderId());
                 item.put("bouquetCode", detail.getBouquetCode());
                 
-                // ProductRepository를 사용하여 bouquet_code로 상품 이름 조회
-                Optional<Product> optionalProduct = productRepository.findById(detail.getBouquetCode());
-                if(optionalProduct.isPresent()) {
-                    item.put("productName", optionalProduct.get().getProductName());
-                } else {
-                    item.put("productName", "알 수 없는 상품");
+                // ⭐ 수정된 부분: productName과 imageName을 조회하는 로직을 재구성합니다.
+                String productName = "알 수 없는 상품";
+                String imageName = null;
+
+                // 1. order_detail의 bouquet_code로 bouquet 테이블에서 product_id를 찾습니다.
+                Optional<Bouquet> optionalBouquet = bouquetRepository.findByBouquetCode(detail.getBouquetCode());
+
+                if (optionalBouquet.isPresent()) {
+                    // 2. 찾은 product_id로 product 테이블에서 상품 정보를 조회합니다.
+                    Optional<Product> optionalProduct = productRepository.findById(optionalBouquet.get().getProductId());
+                    if (optionalProduct.isPresent()) {
+                        Product product = optionalProduct.get();
+                        productName = product.getProductName();
+                        imageName = product.getImageName();
+                    }
                 }
                 
+                // 만약 리뷰가 존재한다면, 리뷰에 있는 product_id를 사용해 다시 한 번 조회 시도 (확실성을 위해)
+                if (optionalReview.isPresent()) {
+                    Review review = optionalReview.get();
+                    Optional<Product> reviewProduct = productRepository.findById(review.getProductId());
+                    if (reviewProduct.isPresent()) {
+                         productName = reviewProduct.get().getProductName();
+                         imageName = reviewProduct.get().getImageName();
+                    }
+                }
+                
+                item.put("productName", productName);
+                item.put("imageName", imageName); // 이미지 이름 추가
                 item.put("price", detail.getMoney());
                 item.put("orderDate", order.getOrderDate());
                 
@@ -191,6 +218,7 @@ public class MyPageApi {
         result.put("doneList", doneList);
         return ResponseEntity.ok(result);
     }
+
 
     // 📌 문의(QnA) 조회
     @GetMapping("/qna/{userid}")
