@@ -389,5 +389,24 @@ public class OrdersApiController {
             return new ResponseEntity<>("현재 상태에서는 환불 신청이 불가합니다.", HttpStatus.BAD_REQUEST);
         }
     }
+    
+  	//주문확정 api
+    @PatchMapping("/confirm/{orderId}")
+    public ResponseEntity<String> confirmOrder(@PathVariable("orderId") Integer orderId) {
+        Optional<Orders> orderOpt = ordersRepository.findById(orderId);
+        if (orderOpt.isEmpty()) {
+            return new ResponseEntity<>("주문 정보가 없습니다.", HttpStatus.NOT_FOUND);
+        }
+
+        Orders order = orderOpt.get();
+        // 주문 상태가 "배송완료"일 때만 확정 가능
+        if ("배송완료".equals(order.getStatus())) {
+            order.setStatus("구매확정");
+            ordersRepository.save(order);
+            return new ResponseEntity<>("구매가 확정되었습니다.", HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>("현재 상태에서는 구매 확정이 불가합니다.", HttpStatus.BAD_REQUEST);
+        }
+    }
 
 }
