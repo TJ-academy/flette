@@ -47,7 +47,7 @@ public class Orders {
     private String bank;
 
     @Column(name = "account")
-    private Integer account;
+    private String account;
 
     @Column(name = "status")
     private String status;

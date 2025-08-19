@@ -24,7 +24,7 @@ public class OrdersDTO {
 	
 	private String method;
 	private String bank;
-	private Integer account;
+	private String account;
 	private String status;
 	
 	private String merchantUid; 

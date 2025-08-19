@@ -3,6 +3,7 @@ package com.example.flette.api;
 import com.example.flette.dto.IamportResponse;
 import com.example.flette.dto.OrderDetailDTO;
 import com.example.flette.dto.OrderHistoryDTO;
+import com.example.flette.dto.OrderRefundRequestDTO;
 import com.example.flette.dto.PaymentInfo;
 import com.example.flette.entity.Orders;
 import com.example.flette.repository.OrdersRepository;
@@ -325,4 +326,68 @@ public class OrdersApiController {
             });
         }
     }
+    
+    /* 환불 메서드(환불페이지로 데이터 전송) 취소메서드 재사용*/
+    @GetMapping("/refund/{orderId}/info")
+    public ResponseEntity<?> getRefundInfo(@PathVariable("orderId") int orderId) {
+        Optional<Orders> orderOpt = ordersRepository.findById(orderId);
+        if (orderOpt.isEmpty()) {
+            return new ResponseEntity<>("주문 정보를 찾을 수 없습니다.", HttpStatus.NOT_FOUND);
+        }
+        Orders order = orderOpt.get();
+
+        List<OrderDetail> details = orderDetailRepository.findByOrderId(orderId);
+        if (details.isEmpty()) {
+            return new ResponseEntity<>("주문 상세 품목이 없습니다.", HttpStatus.NOT_FOUND);
+        }
+        
+        OrderCancelInfoDTO cancelInfoDTO = new OrderCancelInfoDTO();
+        cancelInfoDTO.setTotalMoney(order.getTotalMoney());
+
+        for (OrderDetail detail : details) {
+            Optional<Bouquet> bouquetOpt = bouquetRepository.findById(detail.getBouquetCode());
+            if (bouquetOpt.isPresent()) {
+                Bouquet bouquet = bouquetOpt.get();
+                Optional<Product> productOpt = productRepository.findById(bouquet.getProductId());
+                if (productOpt.isPresent()) {
+                    Product product = productOpt.get();
+                    cancelInfoDTO.setProductName(product.getProductName());
+                    cancelInfoDTO.setImageName(product.getImageName());
+                }
+
+                cancelInfoDTO.setMainFlowers(getFlowerOptions(bouquet.getMainA(), bouquet.getMainB(), bouquet.getMainC()));
+                cancelInfoDTO.setSubFlowers(getFlowerOptions(bouquet.getSubA(), bouquet.getSubB(), bouquet.getSubC()));
+                cancelInfoDTO.setFoliageFlowers(getFlowerOptions(bouquet.getLeafA(), bouquet.getLeafB(), bouquet.getLeafC()));
+            }
+        }
+        return new ResponseEntity<>(cancelInfoDTO, HttpStatus.OK);
+    }
+    
+    //환불요청 api
+    @PatchMapping("/refund/{orderId}")
+    public ResponseEntity<String> refundOrder(@PathVariable("orderId") Integer orderId, 
+                                              @RequestBody OrderRefundRequestDTO requestDto) {
+        Optional<Orders> orderOpt = ordersRepository.findById(orderId);
+        if (orderOpt.isEmpty()) {
+            return new ResponseEntity<>("주문 정보가 없습니다.", HttpStatus.NOT_FOUND);
+        }
+
+        Orders order = orderOpt.get();
+        // 주문 상태가 "결제완료"일 때만 환불 가능하도록 로직 유지
+        if ("결제완료".equals(order.getStatus())) {
+            // DTO에서 받은 정보로 Orders 엔티티 업데이트
+            order.setRefundReason(requestDto.getRefundReason());
+            order.setAccount(requestDto.getAccount());
+            order.setBank(requestDto.getBank());
+            
+            // 상태를 "환불요청"으로 변경
+            order.setStatus("환불요청"); 
+            
+            ordersRepository.save(order);
+            return new ResponseEntity<>("환불 요청이 성공적으로 접수되었습니다.", HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>("현재 상태에서는 환불 신청이 불가합니다.", HttpStatus.BAD_REQUEST);
+        }
+    }
+
 }
