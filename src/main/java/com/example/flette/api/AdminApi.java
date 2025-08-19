@@ -82,7 +82,7 @@ public class AdminApi {
      */
     @GetMapping("/members")
     public ResponseEntity<Page<MemberDTO>> getMembers(
-            @PageableDefault(size = 10) Pageable pageable) {
+            @PageableDefault(size = 10, sort = "joinedAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
         Page<Member> page = memberRepository.findAll(pageable);
         Page<MemberDTO> body = page.map(MemberDTO::from);
@@ -232,6 +232,7 @@ public class AdminApi {
             @RequestParam(name="from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(name="to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to
     ) {
+        // 날짜 기준으로 역순으로 정렬 (최신 날짜 순으로)
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "orderDate"));
 
         Specification<Orders> spec = (root, query, cb) -> {
@@ -256,9 +257,10 @@ public class AdminApi {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
 
-        // 이 줄은 이제 정상적으로 작동합니다.
+        // 이 부분은 날짜 기준으로 역순 정렬을 적용한 결과
         return ordersRepository.findAll(spec, pageable).map(OrderSummaryDto::from);
     }
+
 
     // ========================= 주문 단건 조회 (헤더 + 라인아이템) =========================
     @GetMapping("/orders/{orderId}")

@@ -14,12 +14,11 @@ public class ReviewAllApi {
     @Autowired
     private ReviewRepository reviewRepository;
 
-    // 모든 리뷰 조회 (페이지네이션 지원)
     @GetMapping
     public Page<Review> getAllReviews(
             @RequestParam(name = "page", defaultValue = "1") int page, 
             @RequestParam(name = "size", defaultValue = "8") int size) {
         
-        return reviewRepository.findAll(PageRequest.of(page - 1, size));
+        return reviewRepository.findByReviewImageIsNotNull(PageRequest.of(page - 1, size));
     }
 }
