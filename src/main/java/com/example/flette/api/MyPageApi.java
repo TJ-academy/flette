@@ -165,6 +165,7 @@ public class MyPageApi {
                 item.put("bouquetCode", detail.getBouquetCode());
                 
                 // ⭐ 수정된 부분: productName과 imageName을 조회하는 로직을 재구성합니다.
+                int productId = 0;
                 String productName = "알 수 없는 상품";
                 String imageName = null;
 
@@ -176,6 +177,7 @@ public class MyPageApi {
                     Optional<Product> optionalProduct = productRepository.findById(optionalBouquet.get().getProductId());
                     if (optionalProduct.isPresent()) {
                         Product product = optionalProduct.get();
+                        productId = product.getProductId();
                         productName = product.getProductName();
                         imageName = product.getImageName();
                     }
@@ -186,11 +188,13 @@ public class MyPageApi {
                     Review review = optionalReview.get();
                     Optional<Product> reviewProduct = productRepository.findById(review.getProductId());
                     if (reviewProduct.isPresent()) {
+                    	 productId = reviewProduct.get().getProductId();
                          productName = reviewProduct.get().getProductName();
                          imageName = reviewProduct.get().getImageName();
                     }
                 }
                 
+                item.put("productId", productId);
                 item.put("productName", productName);
                 item.put("imageName", imageName); 
                 item.put("price", detail.getMoney());
