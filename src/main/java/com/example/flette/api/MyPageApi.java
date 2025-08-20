@@ -192,7 +192,7 @@ public class MyPageApi {
                 }
                 
                 item.put("productName", productName);
-                item.put("imageName", imageName); // 이미지 이름 추가
+                item.put("imageName", imageName); 
                 item.put("price", detail.getMoney());
                 item.put("orderDate", order.getOrderDate());
                 
