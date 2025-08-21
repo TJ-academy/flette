@@ -284,6 +284,12 @@ public class OrdersApiController {
                 savedOrder.setImpUid(verifyDto.imp_uid);
                 savedOrder.setStatus("결제완료");
                 ordersRepository.save(savedOrder);
+                
+                List<OrderDetail> odl = orderDetailRepository.findByOrderId(savedOrder.getOrderId());
+                for(OrderDetail od : odl) {
+                	cartRepository.deleteByBouquet_BouquetCode(od.getBouquetCode());
+                }
+                
                 return new ResponseEntity<>("결제 성공 및 DB 업데이트 완료", HttpStatus.OK);
             } else {
                 return new ResponseEntity<>("결제 위변조 또는 실패", HttpStatus.BAD_REQUEST);

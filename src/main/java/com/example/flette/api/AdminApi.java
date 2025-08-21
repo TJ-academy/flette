@@ -266,9 +266,7 @@ public class AdminApi {
     @GetMapping("/orders/{orderId}")
     public OrderViewDto getOrder(@PathVariable("orderId") Integer orderId) {
         Orders o = ordersRepository.findById(orderId).orElseThrow();
-        List<OrderDetail> lines = orderDetailRepository.findAll(
-                Example.of(new OrderDetail(null, orderId, null, null))
-        );
+        List<OrderDetail> lines = orderDetailRepository.findByOrderId(orderId);
 
         List<OrderLineDto> items = new ArrayList<>();
         for (OrderDetail d : lines) {
@@ -365,7 +363,7 @@ public class AdminApi {
     static class OrderSummaryDto {
         private Integer orderId;
         private String userid;
-        private String money;
+        private Integer money;
         private Integer delivery;
         private Integer totalMoney;
         private String status;
