@@ -25,7 +25,7 @@ public class Orders {
     private String userid;
 
     @Column(name = "money")
-    private String money;
+    private Integer money;
 
     @Column(name = "delivery")
     private Integer delivery;
@@ -33,8 +33,13 @@ public class Orders {
     @Column(name = "total_money")  // ✅ snake_case
     private Integer totalMoney;
 
+    @Column(name = "receiver")
+    private String receiver;
+    
     @Column(name = "order_address")
     private String orderAddress;
+    
+    private String tel;
 
     @CreationTimestamp
     @Column(name = "order_date")

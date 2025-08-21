@@ -5,8 +5,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,8 +26,6 @@ import com.example.flette.entity.Member;
 import com.example.flette.entity.Product;
 import com.example.flette.repository.BouquetRepository;
 import com.example.flette.repository.CartRepository;
-import com.example.flette.repository.DecorationRepository;
-import com.example.flette.repository.FlowerRepository;
 import com.example.flette.repository.MemberRepository;
 import com.example.flette.repository.ProductRepository;
 import com.example.flette.util.BouquetUtils;
@@ -42,9 +38,6 @@ public class CartApi {
     @Autowired private BouquetRepository bouquetRepository;
     @Autowired private MemberRepository memberRepository;
     @Autowired private ProductRepository productRepository;
-    @Autowired private FlowerRepository flowerRepository;
-    @Autowired private DecorationRepository decorationRepository;
-    
     
     @Autowired
     private ModelMapper modelMapper;
@@ -76,6 +69,7 @@ public class CartApi {
         	cdto.setQuantity(cart.getQuantity());
         	cdto.setTotalPrice(cart.getTotalPrice());
         	cdto.setProductName(op.get().getProductName());
+        	cdto.setProductImageName(op.get().getImageName());
         	
         	List<BouquetInfoDTO> infoList = bouquetUtils.extractBouquetInfo(bouquet);
             cdto.setBouquetInfoList(infoList);
@@ -88,6 +82,7 @@ public class CartApi {
         return map;
     }
     
+    // 장바구니 추가
     @PostMapping("/insert")
     public Map<String, Object> insertCart(@RequestBody CartDTO req) {
     	Map<String, Object> map = new HashMap<>();
@@ -129,6 +124,35 @@ public class CartApi {
     public void removeFromCart(@PathVariable(name = "cartId") Integer cartId) {
         cartRepository.deleteById(cartId);
     }
+    
+    // 선택한 장바구니 지우기
+    @DeleteMapping("/remove/selected/{userid}")
+    public void removeFromCart(@PathVariable(name = "userid") String userid, 
+    		@RequestBody List<Integer> selectedCartIds) {
+    	for (Integer cartId : selectedCartIds) {
+            cartRepository.deleteById(cartId);
+        }
+    }
+    
+    // 장바구니 비우기
+    @DeleteMapping("/remove/all/{userid}")
+    public Map<String, Object> removeAll(@PathVariable(name = "userid") String userid) {
+    	Map<String, Object> result = new HashMap<>();
+    	
+    	List<Cart> cartItems = cartRepository.findByMember_UseridOrderByCartIdAsc(userid);
+    	
+    	try {
+    		cartRepository.deleteAll(cartItems);
+
+            result.put("success", true);
+            result.put("message", "장바구니가 비워졌습니다.");
+    	} catch (Exception e) {
+    		result.put("success", false);
+            result.put("message", "장바구니 비우기 실패: " + e.getMessage());
+    	}
+    	
+    	return result;
+    }
 
     // 장바구니 항목 업데이트 (수량)
     @PatchMapping("/update/{cartId}")
@@ -140,6 +164,8 @@ public class CartApi {
         cart.setQuantity(body.get("quantity"));
         cart.setTotalPrice(cart.getPrice() * body.get("quantity"));
 
+        cartRepository.save(cart);
+        
         CartDTO dto = new CartDTO();
         dto.setCartId(cart.getCartId());
         dto.setBouquetCode(cart.getBouquet().getBouquetCode());
@@ -149,21 +175,5 @@ public class CartApi {
         dto.setTotalPrice(cart.getTotalPrice());
         
         return dto;
-    }
-
-    // 주문하기
-    @PostMapping("/checkout/{userId}")
-    public String checkout(@PathVariable String userId) {
-        Member member = memberRepository.findById(userId)
-        		.orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
-        List<Cart> cartItems = cartRepository.findByMember(member);
-        int totalAmount = cartItems.stream().mapToInt(Cart::getTotalPrice).sum();
-
-        // 주문 처리 로직... (예: 주문 생성, 결제 처리 등)
-        
-        // 주문 후 장바구니 비우기
-        cartRepository.deleteAll(cartItems);
-
-        return "주문이 완료되었습니다. 총 금액: " + totalAmount + "원";
     }
 }

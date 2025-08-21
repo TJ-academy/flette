@@ -1,33 +1,50 @@
 package com.example.flette.api;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.example.flette.dto.BouquetDTO;
+import com.example.flette.dto.CartDTO;
 import com.example.flette.dto.IamportResponse;
+import com.example.flette.dto.OrderCancelInfoDTO;
+import com.example.flette.dto.OrderDetailBouquetDTO;
 import com.example.flette.dto.OrderDetailDTO;
 import com.example.flette.dto.OrderHistoryDTO;
 import com.example.flette.dto.OrderRefundRequestDTO;
 import com.example.flette.dto.PaymentInfo;
-import com.example.flette.entity.Orders;
-import com.example.flette.repository.OrdersRepository;
-import com.example.flette.service.IamportService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import com.example.flette.dto.OrderCancelInfoDTO;
-import com.example.flette.entity.Flower;
-
-import java.util.List;
-import java.util.Optional;
-import java.util.ArrayList;
 import com.example.flette.entity.Bouquet;
-import com.example.flette.entity.Decoration; // 추가
+import com.example.flette.entity.Cart;
+import com.example.flette.entity.Member;
 import com.example.flette.entity.OrderDetail;
+import com.example.flette.entity.Orders;
 import com.example.flette.entity.Product;
 import com.example.flette.repository.BouquetRepository;
+import com.example.flette.repository.CartRepository;
 import com.example.flette.repository.DecorationRepository; // 추가
 import com.example.flette.repository.FlowerRepository;
+import com.example.flette.repository.MemberRepository;
 import com.example.flette.repository.OrderDetailRepository;
+import com.example.flette.repository.OrdersRepository;
 import com.example.flette.repository.ProductRepository;
 import com.example.flette.repository.ReviewRepository;
+import com.example.flette.service.IamportService;
+import com.example.flette.util.BouquetUtils;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -38,14 +55,21 @@ public class OrdersApiController {
 
     @Autowired
     private IamportService iamportService;
+    
     @Autowired
     private OrderDetailRepository orderDetailRepository;
 
     @Autowired
     private BouquetRepository bouquetRepository;
+    
+    @Autowired
+    private CartRepository cartRepository;
 
     @Autowired
     private ProductRepository productRepository;
+    
+    @Autowired
+    private MemberRepository memberRepository;
 
     @Autowired
     private ReviewRepository reviewRepository;
@@ -53,16 +77,148 @@ public class OrdersApiController {
     private FlowerRepository flowerRepository;
     @Autowired
     private DecorationRepository decorationRepository; // 추가
+    
+    @Autowired
+    private BouquetUtils bouquetUtils;
+    
+    @Autowired
+	ModelMapper modelMapper;
 
-
-    //------결제 관련 로직------------------------------------------------
-    public static class PaymentRequestDto {
-        public String merchant_uid;
-        public int amount;
-        public String name;
-        public String buyerName;
-        public String buyerTel;
+    // 장바구니에서 주문하기
+    @PostMapping("/cart/{userid}")
+    public Integer orderCart(@PathVariable(name = "userid") String userid, 
+    		@RequestBody List<Integer> selectedCartIds) {
+    	//주문하려는 장바구니 리스트
+    	List<CartDTO> cdtos = new ArrayList<>();
+    	//주문하려는 꽃다발 리스트
+    	List<BouquetDTO> bdtos = new ArrayList<>();
+    	
+    	int cartsPrice = 0;
+    	
+    	for(Integer cartId : selectedCartIds) {
+    		Optional<Cart> oc = cartRepository.findById(cartId);
+    		CartDTO cdto = modelMapper.map(oc.get(), CartDTO.class);
+    		cdtos.add(cdto);
+    		
+    		Integer bouquetCode = cdto.getBouquetCode();
+    		Optional<Bouquet> ob = bouquetRepository.findById(bouquetCode);
+    		BouquetDTO bdto = modelMapper.map(ob.get(), BouquetDTO.class);
+    		bdtos.add(bdto);
+    		
+    		cartsPrice += bdto.getTotalMoney() * cdto.getQuantity();
+    	}
+    	
+    	Integer deliveryFee = (cartsPrice < 50000) ? 3000 : 0;
+    	Integer totalPrice = cartsPrice + deliveryFee;
+        
+        Orders order = new Orders();
+        order.setUserid(userid);
+        order.setMoney(cartsPrice);
+        order.setDelivery(deliveryFee);
+        order.setTotalMoney(totalPrice);
+        Orders savedOrder = ordersRepository.save(order);
+    	
+    	for(CartDTO c : cdtos) {
+    		OrderDetail orderdetail = new OrderDetail();
+    		orderdetail.setBouquetCode(c.getBouquetCode());
+        	orderdetail.setMoney(c.getPrice());
+        	orderdetail.setQuantity(c.getQuantity());
+        	orderdetail.setTotalMoney(c.getTotalPrice());
+        	orderdetail.setOrderId(savedOrder.getOrderId());
+        	orderDetailRepository.save(orderdetail);
+    	}
+    	
+    	return savedOrder.getOrderId();
     }
+    
+    // 상품 페이지에서 주문하기
+    @PostMapping("/shop/{userid}/{bouquetCode}")
+    public Integer orderBouquet(@PathVariable(name = "userid") String userid, 
+    		@PathVariable(name = "bouquetCode") Integer bouquetCode) {
+    	
+    	//주문하려는 꽃다발 리스트
+    	Optional<Bouquet> ob = bouquetRepository.findById(bouquetCode);
+    	BouquetDTO bdto = modelMapper.map(ob.get(), BouquetDTO.class);
+    	
+    	Integer bouquetPrice = bdto.getTotalMoney();
+    	Integer deliveryFee = (bouquetPrice < 50000) ? 3000 : 0;
+    	Integer totalPrice = bouquetPrice + deliveryFee;
+        
+        Orders order = new Orders();
+        order.setUserid(userid);
+        order.setMoney(bouquetPrice);
+        order.setDelivery(deliveryFee);
+        order.setTotalMoney(totalPrice);
+        Orders savedOrder = ordersRepository.save(order);
+    	
+    	OrderDetail orderdetail = new OrderDetail();
+    	orderdetail.setBouquetCode(bouquetCode);
+    	orderdetail.setMoney(ob.get().getTotalMoney());
+    	orderdetail.setQuantity(1);
+    	orderdetail.setTotalMoney(ob.get().getTotalMoney());
+    	orderdetail.setOrderId(savedOrder.getOrderId());
+    	orderDetailRepository.save(orderdetail);
+    	
+    	return savedOrder.getOrderId();
+    }
+    
+    // 주문페이지
+    @GetMapping("/{orderId}")
+    public Map<String, Object> orderPage(@PathVariable(name = "orderId") Integer orderId) {
+    	Map<String, Object> map = new HashMap<>();
+    	
+    	Optional<Orders> oo = ordersRepository.findById(orderId);
+    	Orders order = oo.get();
+    	
+    	List<OrderDetail> detailList = orderDetailRepository.findByOrderId(orderId);
+    	List<OrderDetailBouquetDTO> detailDTOList = new ArrayList<>();
+    	
+    	List<Bouquet> bouquetList = new ArrayList<>();
+    	for(OrderDetail detail : detailList) {
+    		Optional<Bouquet> b = bouquetRepository.findById(detail.getBouquetCode());
+    		bouquetList.add(b.get());
+    		
+    		OrderDetailBouquetDTO odbdto = new OrderDetailBouquetDTO();
+    		odbdto.setDetailId(detail.getDetailId());
+    		odbdto.setOrderId(orderId);
+    		odbdto.setBouquetCode(detail.getBouquetCode());
+    		
+    		Optional<Product> p = productRepository.findById(b.get().getProductId());
+    		odbdto.setProductName(p.get().getProductName());
+    		odbdto.setImageName(p.get().getImageName());
+    		
+    		odbdto.setMoney(detail.getMoney());
+    		odbdto.setQuantity(detail.getQuantity());
+    		odbdto.setTotalMoney(detail.getTotalMoney());
+    		odbdto.setBouquetInfoList(bouquetUtils.extractBouquetInfo(b.get()));
+    		detailDTOList.add(odbdto);
+    	}
+    	
+    	String userid = order.getUserid();
+    	Member userInfo = memberRepository.findByUserid(userid);
+    	
+    	map.put("userInfo", userInfo);
+    	map.put("order", order);
+    	map.put("detailList", detailDTOList);
+    	
+    	//System.out.println("map: " + map);
+    	return map;
+    }
+    
+    // 뒤로가기 누르면 orderId 항목 삭제
+    @DeleteMapping("/{orderId}")
+    public void deleteOrder(@PathVariable(name = "orderId") Integer orderId) {
+        ordersRepository.deleteById(orderId);
+    }
+    
+    //------결제 관련 로직------------------------------------------------
+//    public static class PaymentRequestDto {
+//    	public String merchant_uid;
+//        public int amount;
+//        public String name;
+//        public String buyerName;
+//        public String buyerTel;
+//    }
 
     public static class PaymentVerificationDto {
         public String imp_uid;
@@ -70,20 +226,29 @@ public class OrdersApiController {
     }
 
     @PostMapping("/prepare")
-    public ResponseEntity<?> preparePayment(@RequestBody PaymentRequestDto requestDto) {
+    public ResponseEntity<?> preparePayment(@RequestBody Orders request) {
         try {
             String accessToken = iamportService.getAccessToken();
             if (accessToken == null) {
                 return new ResponseEntity<>("아임포트 토큰 발급 실패", HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
-            Orders newOrder = new Orders();
-            newOrder.setMerchantUid(requestDto.merchant_uid);
-            newOrder.setTotalMoney(requestDto.amount);
-            newOrder.setStatus("결제대기");
-            ordersRepository.save(newOrder);
+            Optional<Orders> order = ordersRepository.findById(request.getOrderId());
+            Orders editOrder = order.get();
+            editOrder.setAccount(request.getAccount());
+            editOrder.setBank(request.getBank());
+            //editOrder.setImpUid(request.getImpUid());
+            editOrder.setMerchantUid(request.getMerchantUid());
+            editOrder.setMethod("카카오페이");
+            
+            editOrder.setReceiver(request.getReceiver());
+            editOrder.setOrderAddress(request.getOrderAddress());
+            editOrder.setTel(request.getTel());
+            
+            editOrder.setStatus("결제대기");
+            ordersRepository.save(editOrder);
 
-            return new ResponseEntity<>(requestDto.merchant_uid, HttpStatus.OK);
+            return new ResponseEntity<>(request.getMerchantUid(), HttpStatus.OK);
         } catch (Exception e) {
             e.printStackTrace();
             return new ResponseEntity<>("결제 사전 등록 실패: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);

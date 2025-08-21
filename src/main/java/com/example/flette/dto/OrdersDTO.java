@@ -15,10 +15,13 @@ public class OrdersDTO {
 	private Integer orderId;
 	
 	private String userid; 
-	private String money;
+	private Integer money;
 	private Integer delivery;
 	private Integer totalMoney; 
+	
+	private String receiver;
 	private String orderAddress;
+	private String tel;
 	
 	private Date orderDate;
 	
