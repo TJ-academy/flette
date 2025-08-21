@@ -20,6 +20,7 @@ public class CartDTO {
     private Integer totalPrice;
     
     private String productName;
+    private String productImageName;
     //private BouquetDTO bouquetData;
     private List<BouquetInfoDTO> bouquetInfoList;
     

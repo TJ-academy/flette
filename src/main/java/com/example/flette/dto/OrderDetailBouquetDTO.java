@@ -1,25 +1,25 @@
-package com.example.flette.entity;
+package com.example.flette.dto;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Entity
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class OrderDetail {
-	@Id
-	@GeneratedValue(strategy = GenerationType.IDENTITY)
+public class OrderDetailBouquetDTO {
 	private Integer detailId;
 	
 	private Integer orderId;
 	private Integer bouquetCode;
+	private String productName;
+	private String imageName;
+	
 	private Integer money;
 	private Integer quantity;
 	private Integer totalMoney;
+	
+	private List<BouquetInfoDTO> bouquetInfoList;
 }
