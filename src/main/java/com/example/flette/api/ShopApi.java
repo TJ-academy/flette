@@ -129,15 +129,6 @@ public class ShopApi {
 		return map;
 	}
 	
-	@PostMapping("/{productId}/review/{id}/like")
-	public void reviewLuv(@PathVariable(name = "productId") Integer productId,
-			@PathVariable(name = "id") Integer reviewId) {
-		Optional<Review> optr = rr.findById(reviewId);
-		Review ret = optr.get();
-		ret.setLuv(ret.getLuv() + 1);
-		rr.save(ret);
-	}
-	
 	@GetMapping("/{productId}/qa")
 	public Map<String, Object> qaList(@PathVariable(name = "productId") Integer productId, 
 			@RequestParam(name = "page",defaultValue = "0") int page, 

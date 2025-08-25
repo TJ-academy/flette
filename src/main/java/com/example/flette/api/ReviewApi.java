@@ -44,6 +44,14 @@ public class ReviewApi {
     @Autowired
     private ReviewRepository reviewRepository; // ReviewRepository 추가
 
+	@PostMapping("/{id}/like")
+	public void reviewLuv(@PathVariable(name = "id") Integer reviewId) {
+		Optional<Review> optr = reviewRepository.findById(reviewId);
+		Review ret = optr.get();
+		ret.setLuv(ret.getLuv() + 1);
+		reviewRepository.save(ret);
+	}
+	
     // 이미지 파일을 저장할 서버 내 경로
     private static final String UPLOAD_DIR = "src/main/resources/static/img/reviews/";
 
