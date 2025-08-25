@@ -555,6 +555,8 @@ public class OrdersApiController {
         }
         OrderCancelInfoDTO cancelInfoDTO = new OrderCancelInfoDTO();
         cancelInfoDTO.setTotalMoney(order.getTotalMoney());
+        cancelInfoDTO.setBank(order.getBank());
+        cancelInfoDTO.setAccount(order.getAccount());
 
         for (OrderDetail detail : details) {
             Optional<Bouquet> bouquetOpt = bouquetRepository.findById(detail.getBouquetCode());

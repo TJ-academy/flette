@@ -8,6 +8,10 @@ public class OrderCancelInfoDTO {
     private String productName;
     private String imageName;
     private int totalMoney;
+    
+    private String bank;
+	private String account;
+	
     private List<FlowerOption> mainFlowers;
     private List<FlowerOption> subFlowers;
     private List<FlowerOption> foliageFlowers;
